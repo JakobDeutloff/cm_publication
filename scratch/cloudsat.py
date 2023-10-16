@@ -30,6 +30,9 @@ def collect_cloudsat(start, end):
 
     return data
 # %%
-data = collect_cloudsat("2007-01-01", "2007-01-02")
-
+data = collect_cloudsat("2019-07-01", "2019-07-02")
+# start dataset: 2006-07-01 
+# end dataset: 2019-07-01
+# %%
+data.to_netcdf('one_day_fwp.nc')
 # %%
