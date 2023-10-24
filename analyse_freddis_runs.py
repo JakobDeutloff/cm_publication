@@ -17,20 +17,20 @@ IWP = ((atms["IWC"] + atms["snow"] + atms["graupel"]) * atms["geometric height"]
     "pressure"
 )
 
-
 # %% load cloudsat data for 2015
 path_cloudsat = "/work/bm1183/m301049/cloudsat/"
 cloudsat = xr.open_dataset(path_cloudsat + "2015-07-01_2016-07-01_fwp.nc")
 cloudsat = cloudsat.to_pandas()
 
 # %% select tropics
+# TWP : 143°E−153°E, 5°N–5°S
 lat_mask = (cloudsat["lat"] <= 30) & (cloudsat["lat"] >= -30)
 cloudsat_trop = cloudsat[lat_mask]
 
-IWP_trop = IWP.sel(lat=slice(-30, 30))
+IWP_trop = IWP.sel(lat=slice(-30, 30), lon=slice())
 
 # %% calculate share of zeros
-zeros_freddi = (IWP_trop.where(IWP_trop == 0).count() / IWP_trop.count()).values
+zeros_freddi = float((IWP_trop.where(IWP_trop == 0).count() / IWP_trop.count()).values)
 zeros_cloudsat = (
     cloudsat_trop["ice_water_path"].where(cloudsat_trop["ice_water_path"] == 0).count()
     / cloudsat_trop["ice_water_path"].count()
@@ -50,17 +50,18 @@ hist, edges = np.histogram(
 hist_norm = hist / (
     np.diff(edges) * len(cloudsat_trop["ice_water_path"]) * (1 - zeros_cloudsat)
 )
-ax.stairs(hist_norm, edges, color="blue", label="CloudSat")
+ax.stairs(hist_norm, edges, color="blue", label="2C-ICE")
 
 # freddi
-hist, edges = np.histogram(IWP_trop, bins=bins, density=False)
-hist_norm = hist / (np.diff(edges) * len(IWP_trop) * (1 - zeros_freddi))
-ax.stairs(hist_norm, edges, color="red", label="FREDDI")
+IWP_vals = IWP_trop.values.flatten()
+hist, edges = np.histogram(IWP_vals, bins=bins, density=False)
+hist_norm = hist / (np.diff(edges) * len(IWP_vals) * (1 - zeros_freddi))
+ax.stairs(hist_norm, edges, color="red", label="ICON")
 
 ax.set_xscale("log")
 ax.set_yscale("log")
-ax.set_xlim(1e-6, 1e4)
-ax.set_ylim(1e-4, 1e8)
+ax.set_xlim(1e-6, 1e3)
+ax.set_ylim(1e-4, 1e4)
 ax.legend()
 ax.set_xlabel("IWP / kg m$^{-2}$")
 ax.set_ylabel("Probability Density / (kg m$^{-2}$)$^{-1}$")
