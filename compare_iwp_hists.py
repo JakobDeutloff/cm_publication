@@ -12,10 +12,9 @@ fluxes_3d = xr.open_dataset(path_freddi + "fluxes_3d.nc")
 fluxes_2D = xr.open_dataset(path_freddi + "fluxes_2d.nc")
 aux = xr.open_dataset(path_freddi + "aux.nc")
 
-# claculate IWP
-IWP = ((atms["IWC"] + atms["snow"] + atms["graupel"]) * atms["geometric height"]).sum(
-    "pressure"
-)
+# calculate IWP and LWP
+cell_height = atms["geometric height"].diff("pressure")
+IWP = ((atms["IWC"] + atms["snow"] + atms["graupel"]) * cell_height).sum("pressure")
 
 # %% load cloudsat data for 2015
 path_cloudsat = "/work/bm1183/m301049/cloudsat/"
@@ -27,7 +26,7 @@ cloudsat = cloudsat.to_pandas()
 lat_mask = (cloudsat["lat"] <= 30) & (cloudsat["lat"] >= -30)
 cloudsat_trop = cloudsat[lat_mask]
 
-IWP_trop = IWP.sel(lat=slice(-30, 30), lon=slice())
+IWP_trop = IWP.sel(lat=slice(-30, 30))
 
 # %% calculate share of zeros
 zeros_freddi = float((IWP_trop.where(IWP_trop == 0).count() / IWP_trop.count()).values)
