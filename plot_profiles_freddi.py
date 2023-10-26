@@ -2,22 +2,19 @@
 import xarray as xr
 import matplotlib.pyplot as plt
 import numpy as np
-import cartopy.crs as ccrs  
+import cartopy.crs as ccrs
+from src.plot_functions import plot_profiles
+from cmocean import cm
 
 # %% load data from freddis runs
 path_freddi = "/work/bm1183/m301049/freddi_runs/"
-atms = xr.open_dataset(path_freddi + "atms.nc")
-fluxes_3d = xr.open_dataset(path_freddi + "fluxes_3d.nc")
+atms = xr.open_dataset(path_freddi + "atms_full.nc")
+fluxes_3d = xr.open_dataset(path_freddi + "fluxes_3d_full.nc")
 fluxes_2d = xr.open_dataset(path_freddi + "fluxes_2d.nc")
 aux = xr.open_dataset(path_freddi + "aux.nc")
 
-# %% calculate IWP and LWP
-cell_height = atms["geometric height"].diff("pressure")
-atms["IWP"] = ((atms["IWC"] + atms["snow"] + atms["graupel"]) * cell_height).sum("pressure")
-atms["LWP"] = ((atms["rain"] + atms["LWC"]) * cell_height).sum("pressure")
-
 # %% find high clouds with no low clouds below
-mask_hc_no_lc = (atms["IWP"] > 1) & (atms["LWP"] < 0.1)
+mask_hc_no_lc = (atms["IWP"] > 0.5) & (atms["LWP"] < 0.1)
 lon_3d, lat_3d = np.meshgrid(atms["lon"], atms["lat"])
 lons = lon_3d[mask_hc_no_lc]
 lats = lat_3d[mask_hc_no_lc]
@@ -34,97 +31,115 @@ gl.top_labels = False
 gl.right_labels = False
 
 # %% select random profile from sample
+raw_lat = 5
+raw_lon = -30
 
-raw_lat = 0
-raw_lon = -1
-
-idx_lat = np.argmin(np.abs(lats - raw_lat))
-idx_lon = np.argmin(np.abs(lons - raw_lon))
-lat = lats[idx_lat]
-lon = lons[idx_lon]
+diff_lat = np.abs(lats - raw_lat)
+diff_lon = np.abs(lons - raw_lon)
+idx = np.argmin(diff_lat + diff_lon)
+lat = lats[idx]
+lon = lons[idx]
 
 # %%  plot profiles at point
+plot_profiles(lat, lon, atms, fluxes_3d)
+
+# %% calculate plot quantities
+ 
+iwp_cutoff = 0.1
+
+iwp = atms["IWP"].sel(lat=slice(-30, 30))
+iwp = iwp.where(iwp > iwp_cutoff)
+
+pres = atms["h_cloud_top_pressure"].sel(lat=slice(-30, 30))
+pres = pres.where(atms["IWP"].sel(lat=slice(-30, 30)) > iwp_cutoff) / 100
+
+temp = atms["h_cloud_temperature"].sel(lat=slice(-30, 30))
+temp = temp.where(atms["IWP"].sel(lat=slice(-30, 30)) > iwp_cutoff)
+
+# %% plot maps of IWP and T_h
+fig, axes = plt.subplots(
+    3, 1, figsize=(14, 8), subplot_kw={"projection": ccrs.PlateCarree()}
+)
+
+iwp.plot(
+    ax=axes[0],
+    transform=ccrs.PlateCarree(),
+    levels=np.linspace(iwp_cutoff, 7, 20),
+    extend="max",
+    cmap="cool",
+)
+
+temp.plot(
+    ax=axes[1],
+    transform=ccrs.PlateCarree(),
+    levels=np.linspace(200, 300, 20),
+    extend="min",
+    cmap="RdBu_r",
+)
+
+pres.plot(
+    ax=axes[2],
+    transform=ccrs.PlateCarree(),
+    levels=np.linspace(100, 1000, 20),
+    extend="min",
+    cmap=cm.deep,
+)
+
+for ax in axes:
+    ax.coastlines()
+    gl = ax.gridlines(draw_labels=True)
+    gl.top_labels = False
+    gl.right_labels = False
+
+fig.tight_layout()
 
 
-def plot_profiles(lat, lon):
-    fig, axes = plt.subplots(2, 4, figsize=(10, 10), sharey="row")
-    data = atms.sel(lat=lat, lon=lon, method="nearest")
-    fluxes = fluxes_3d.sel(lat=lat, lon=lon, method="nearest")
-    flx_2d = fluxes_2d.sel(lat=lat, lon=lon, method="nearest")
-    height = data["geometric height"] / 1e3
+# %% simple scatterplot
+fig, axes = plt.subplots(2, 2, figsize=(12, 10), sharex="col", sharey='row')
 
-    # plot frozen hydrometeors
-    axes[0, 0].plot(data["IWC"], height, label="IWC", color="k")
-    axes[0, 0].plot(data["snow"], height, label="snow", color="k", linestyle="--")
-    axes[0, 0].plot(data["graupel"], height, label="graupel", color="k", linestyle=":")
-    axes[0, 0].set_ylabel("height / km")
-    axes[0, 0].set_xlabel("F. Hyd. / kg m$^{-3}$")
-    axes[0, 0].legend()
+axes[0, 0].scatter(pres, temp, s=0.3, color="black")
+axes[0, 0].set_ylabel("T_h / K")
 
-    # plot liquid hydrometeors
-    axes[0, 1].plot(data["LWC"], height, label="LWC", color="k")
-    axes[0, 1].plot(data["rain"], height, label="rain", color="k", linestyle="--")
-    axes[0, 1].set_xlabel("L. Hyd. / kg m$^{-3}$")
-    axes[0, 1].legend()
+axes[0, 1].scatter(iwp, temp, s=0.3, color="black")
+axes[0 ,1].set_xlabel('FWP / kg m$^{-2}$')
 
-    # plot temperature
-    axes[0, 2].plot(data["temperature"], height, color="black")
-    axes[0, 2].set_xlabel("Temperature / K")
+axes[1, 0].scatter(pres, iwp, s=0.3, color="black")
+axes[1, 0].set_xlabel("p_h / hPa")
+axes[1, 0].set_ylabel("FWP / kg m$^{-2}$")
 
-    # plot LW fluxes up
-    axes[1, 0].plot(fluxes["allsky_lw_up"], height, label="allsky", color="k")
-    axes[1, 0].plot(
-        fluxes["clearsky_lw_up"], height, label="clearsky", color="k", linestyle="--"
-    )
-    axes[1, 0].set_ylabel("height / km")
-    axes[1, 0].set_xlabel("LW Up / W m$^{-2}$")
-    axes[1, 0].legend()
+axes[1, 1].remove()
 
-    # plot LW fluxes down
-    axes[1, 1].plot(fluxes["allsky_lw_down"], height, label="allsky", color="k")
-    axes[1, 1].plot(
-        fluxes["clearsky_lw_down"], height, label="clearsky", color="k", linestyle="--"
-    )
-    axes[1, 1].set_xlabel("LW Down / W m$^{-2}$")
-    axes[1, 1].legend()
+# %% plot mean profiles of frozen hydrometeors 
+fig, axes = plt.subplots(1, 3, figsize=(12, 5), sharey='row')
 
-    # plot SW fluxes up
-    axes[1, 2].plot(fluxes["allsky_sw_up"], height, label="allsky", color="k")
-    axes[1, 2].plot(
-        fluxes["clearsky_sw_up"], height, label="clearsky", color="k", linestyle="--"
-    )
-    axes[1, 2].set_xlabel("SW Up / W m$^{-2}$")
-    axes[1, 2].legend()
+# IWC
+iwc_mean = atms["IWC"].sel(lat=slice(-30, 30)).mean(['lat', 'lon'])
+iwc_std = atms["IWC"].sel(lat=slice(-30, 30)).std(['lat', 'lon'])
+axes[0].plot(iwc_mean, iwc_mean.pressure/100, color='black')
+axes[0].fill_betweenx(iwc_mean.pressure/100, iwc_mean - iwc_std, iwc_mean + iwc_std, color='black', alpha=0.5)
+axes[0].set_ylabel("Pressure / hPa")
+axes[0].set_xlabel("IWC / kg m$^{-3}$")
 
-    # plot SW fluxes down
-    axes[1, 3].plot(fluxes["allsky_sw_down"], height, label="allsky", color="k")
-    axes[1, 3].plot(
-        fluxes["clearsky_sw_down"], height, label="clearsky", color="k", linestyle="--"
-    )
-    axes[1, 3].set_xlabel("SW Down / W m$^{-2}$")
-    axes[1, 3].legend()
+# Graupel
+graupel_mean = atms["graupel"].sel(lat=slice(-30, 30)).mean(['lat', 'lon'])
+graupel_std = atms["graupel"].sel(lat=slice(-30, 30)).std(['lat', 'lon'])
+axes[1].plot(graupel_mean, graupel_mean.pressure/100, color='black')
+axes[1].fill_betweenx(graupel_mean.pressure/100, graupel_mean - graupel_std, graupel_mean + graupel_std, color='black', alpha=0.5)
+axes[1].set_xlabel("Graupel / kg m$^{-3}$")
 
-    for ax in axes.flatten():
-        ax.set_ylim(0, 20)
-        ax.spines["top"].set_visible(False)
-        ax.spines["right"].set_visible(False)
+# Snow
+snow_mean = atms["snow"].sel(lat=slice(-30, 30)).mean(['lat', 'lon'])
+snow_std = atms["snow"].sel(lat=slice(-30, 30)).std(['lat', 'lon'])
+axes[2].plot(snow_mean, snow_mean.pressure/100, color='black')
+axes[2].fill_betweenx(snow_mean.pressure/100, snow_mean - snow_std, snow_mean + snow_std, color='black', alpha=0.5)
+axes[2].set_xlabel("Snow / kg m$^{-3}$")
 
-    # plot coordinates and toa fluxes
-    axes[0, 3].remove()
-    fig.text(
-        0.9,
-        0.8,
-        f"lat: {lat.round(2)}\nlon: {lon.round(2)}",
-        ha="center",
-        va="center",
-        fontsize=11,
-    )
-
-    fig.tight_layout()
+for ax in axes:
+    ax.invert_yaxis()
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
 
 
-# %%
-plot_profiles(lat, lon)
 
 
 # %%
