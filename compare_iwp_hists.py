@@ -53,12 +53,12 @@ hist_norm = hist / (np.diff(edges) * len(IWP_vals) * (1 - zeros_freddi))
 ax.stairs(hist_norm, edges, color="red", label="ICON")
 
 ax.set_xscale("log")
-#ax.set_yscale("log")
+ax.set_yscale("log")
 ax.set_xlim(1e-6, 1e3)
-#ax.set_ylim(1e-4, 1e4)
+ax.set_ylim(1e-4, 1e4)
 ax.legend()
 ax.set_xlabel("IWP / kg m$^{-2}$")
 ax.set_ylabel("Probability Density / (kg m$^{-2}$)$^{-1}$")
-
+fig.savefig("plots/IWP_hist_ICON_cloudsat.png", dpi=300)
 
 # %%

@@ -89,10 +89,9 @@ cmap = mpl.colormaps["viridis"]
 sm = plt.cm.ScalarMappable(cmap=cmap)
 sm.set_array([])
 
+# years with higher occurences: 2006, 2007, 2008, 2009, 2010, years with less data 2011, 2017
 for i, year in enumerate(range(2006, 2019)):
-    if (
-        year in []
-    ):  # years with higher occurences: 2006, 2007, 2008, 2009, 2010, years with less data 2011, 2017
+    if year in [2011, 2017]:  # years with higher occurences: 2006, 2007, 2008, 2009, 2010, years with less data 2011, 2017
         pass
     else:
         plot_hist(str(year), ax, bins, "solid", color=cmap(i / 13))
@@ -157,11 +156,15 @@ fig.savefig("plots/2c_ice_n_profiles.png", dpi=300, bbox_inches="tight")
 bins = np.logspace(-5, 2, num=70)
 hist = np.zeros((13, len(bins) - 1))
 
-for i, year in enumerate(range(2006, 2019)):
-    hist[i, :], edges = calc_hist(str(year), bins)
-
-hist_mean = hist.mean(axis=0)
-hist_std = hist.std(axis=0)
+for i, year in enumerate(range(2006, 2019)):  # omit years with little data 
+    if year in [2011, 2017]:
+        pass
+    else:
+        hist[i, :], edges = calc_hist(str(year), bins)
+# %%
+hist[hist == 0] = np.nan
+hist_mean = np.nanmean(hist, axis=0)
+hist_std = np.nanstd(hist, axis=0)
 
 fig, ax = plt.subplots(figsize=(5, 3))
 ax.spines["top"].set_visible(False)
