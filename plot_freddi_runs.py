@@ -10,7 +10,7 @@ from cmocean import cm
 path_freddi = "/work/bm1183/m301049/freddi_runs/"
 atms = xr.open_dataset(path_freddi + "atms_full.nc")
 fluxes_3d = xr.open_dataset(path_freddi + "fluxes_3d_full.nc")
-fluxes_2d = xr.open_dataset(path_freddi + "fluxes_2d_full.nc")
+fluxes_2d = xr.open_dataset(path_freddi + "fluxes_2d.nc")
 aux = xr.open_dataset(path_freddi + "aux.nc")
 
 # %% find high clouds with no low clouds below
@@ -24,8 +24,13 @@ fig, ax = plt.subplots(figsize=(12, 4), subplot_kw={"projection": ccrs.PlateCarr
 ax.spines["top"].set_visible(False)
 ax.spines["right"].set_visible(False)
 
-cont = fluxes_3d["allsky_sw_down"].isel(pressure=-1).sel(lat=slice(-30, 30)).plot.contourf(
-    ax=ax, transform=ccrs.PlateCarree(), cmap="viridis", add_colorbar=False
+cont = (
+    (fluxes_3d["allsky_sw_down"])
+    .isel(pressure=-1)
+    .sel(lat=slice(-30, 30))
+    .plot.contourf(
+        ax=ax, transform=ccrs.PlateCarree(), cmap="viridis", add_colorbar=False
+    )
 )
 ax.scatter(lons, lats, s=0.1, color="red", marker="o")
 
@@ -34,26 +39,30 @@ ax.coastlines()
 gl = ax.gridlines(draw_labels=True)
 gl.top_labels = False
 gl.right_labels = False
-ax.set_title('Profiles with IWP > 1e-6 kg m$^{-2}$ and LWP < 1e-10 kg m$^{-2}$')
-fig.colorbar(cont, label="SWin at TOA / W m$^{-2}$", orientation="horizontal", shrink=0.5)
+ax.set_title("Profiles with IWP > 1e-6 kg m$^{-2}$ and LWP < 1e-10 kg m$^{-2}$")
+fig.colorbar(
+    cont, label="SWin at TOA / W m$^{-2}$", orientation="horizontal", shrink=0.5
+)
 fig.tight_layout()
 fig.savefig("plots/profile_locations.png", dpi=300)
 
-# %% select random profile from sample
-raw_lat = 5
-raw_lon = -30
+# %% select profile with a certain IWP 
+IWP = 0.1  # kg m^-2
+# Calculate the absolute difference between atms['IWP'] and a
+diff = abs(atms['IWP'] - IWP)
 
-diff_lat = np.abs(lats - raw_lat)
-diff_lon = np.abs(lons - raw_lon)
-idx = np.argmin(diff_lat + diff_lon)
-lat = lats[idx]
-lon = lons[idx]
+# Find the indices of the minimum difference
+min_diff_indices = diff.argmin(dim=["lat", "lon"])
+
+# Get the latitude and longitude coordinates of the minimum difference
+lat = diff["lat"].isel(lat=min_diff_indices["lat"]).values
+lon = diff["lon"].isel(lon=min_diff_indices["lon"]).values
+
 
 # %%  plot profiles at point
 plot_profiles(lat, lon, atms, fluxes_3d)
 
 # %% calculate plot quantities
-
 iwp_cutoff = 1e-3
 
 iwp = atms["IWP"].sel(lat=slice(-30, 30))
@@ -65,13 +74,10 @@ pres = pres.where(atms["IWP"].sel(lat=slice(-30, 30)) > iwp_cutoff) / 100
 temp = atms["h_cloud_temperature"].sel(lat=slice(-30, 30))
 temp = temp.where(atms["IWP"].sel(lat=slice(-30, 30)) > iwp_cutoff)
 
-atms["cloud_rad_effect"] = (
-    fluxes_2d["toa_allsky_sw"]
-    + fluxes_2d["toa_allsky_lw"]
-    - fluxes_2d["toa_clearsky_sw"]
-    - fluxes_2d["toa_clearsky_lw"]
+cloud_rad_effect = atms["cloud_rad_effect"].sel(lat=slice(-30, 30))
+cloud_rad_effect = cloud_rad_effect.where(
+    atms["IWP"].sel(lat=slice(-30, 30)) > iwp_cutoff
 )
-cloud_rad_effect = atms["cloud_rad_effect"].sel(lat=slice(-30, 30)).where(iwp.notnull())
 
 # %% plot maps of IWP and T_h
 fig, axes = plt.subplots(
@@ -126,7 +132,7 @@ axes[1, 0].set_xlabel("p_h / hPa")
 axes[1, 0].set_ylabel("FWP / kg m$^{-2}$")
 axes[1, 0].set_yscale("log")
 
-axes[1, 1].scatter(iwp, cloud_rad_effect, s=0.3, color="black")
+axes[1, 1].scatter(iwp, cloud_rad_effect * -1, s=0.3, color="black")
 axes[1, 1].set_xlabel("FWP / kg m$^{-2}$")
 axes[1, 1].set_xscale("log")
 axes[1, 1].set_ylabel("Cloud Radiative Effect / W m$^{-2}$")
@@ -180,16 +186,17 @@ for ax in axes:
     ax.spines["right"].set_visible(False)
 
 # %% scatterplot of cloud radiative effect vx IWP at locations with no low cloud below
-
 fig, ax = plt.subplots(figsize=(7, 5))
 ax.spines["top"].set_visible(False)
 ax.spines["right"].set_visible(False)
 
 sc = ax.scatter(
     atms["IWP"].where(mask_hc_no_lc).sel(lat=slice(-30, 30)),
-    atms["cloud_rad_effect"].where(mask_hc_no_lc).sel(lat=slice(-30, 30)),
+    (atms["cloud_rad_effect"]).where(mask_hc_no_lc).sel(lat=slice(-30, 30)),
     s=0.5,
-    c=fluxes_2d["toa_allsky_sw"].where(mask_hc_no_lc).sel(lat=slice(-30, 30)),
+    c=fluxes_3d.isel(pressure=-1)["allsky_sw_down"]
+    .where(mask_hc_no_lc)
+    .sel(lat=slice(-30, 30)),
     cmap="viridis",
 )
 
@@ -202,5 +209,105 @@ ax.set_xlim([1e-4, 1e1])
 ax.axhline(0, color="black", linestyle="--", linewidth=0.7)
 fig.tight_layout()
 fig.savefig("plots/cloud_rad_effect_vs_iwp.png", dpi=300)
+
+# %% plot high cloud albedo against IWP
+
+fig, ax = plt.subplots(figsize=(7, 5))
+ax.spines["top"].set_visible(False)
+ax.spines["right"].set_visible(False)
+
+sc = ax.scatter(
+    atms["IWP"].where(mask_hc_no_lc).sel(lat=slice(-30, 30)),
+    atms["high_cloud_albedo"].where(mask_hc_no_lc).sel(lat=slice(-30, 30)),
+    s=0.5,
+    c=fluxes_3d["allsky_sw_down"]
+    .isel(pressure=-1)
+    .where(mask_hc_no_lc)
+    .sel(lat=slice(-30, 30)),
+    cmap="viridis",
+)
+cb = fig.colorbar(sc)
+cb.set_label("SWin at TOA / W m$^{-2}$")
+ax.set_xlabel("IWP / kg m$^{-2}$")
+ax.set_ylabel("High Cloud Albedo")
+ax.set_xscale("log")
+fig.savefig("plots/high_cloud_albedo_vs_iwp.png", dpi=300)
+
+
+# %% plot emissivity against IWP
+
+fig, ax = plt.subplots(figsize=(7, 5))
+ax.spines["top"].set_visible(False)
+ax.spines["right"].set_visible(False)
+
+sc = ax.scatter(
+    atms["IWP"]
+    .where(mask_hc_no_lc)
+    .where(atms["h_cloud_top_pressure"])
+    .sel(lat=slice(-30, 30)),
+    atms["high_cloud_emissivity"]
+    .where(mask_hc_no_lc)
+    .where(atms["h_cloud_top_pressure"])
+    .sel(lat=slice(-30, 30)),
+    s=0.5,
+    c=fluxes_3d["allsky_sw_down"]
+    .isel(pressure=-1)
+    .where(mask_hc_no_lc)
+    .sel(lat=slice(-30, 30)),
+    cmap="viridis",
+)
+cb = fig.colorbar(sc)
+cb.set_label("SWin at TOA / W m$^{-2}$")
+ax.set_xlabel("IWP / kg m$^{-2}$")
+ax.set_ylabel("High Cloud Emissivity")
+ax.set_xscale("log")
+fig.savefig("plots/high_cloud_emissivity_vs_iwp.png", dpi=300)
+
+# %% Scatterplot high cloud temperature vs surface temperature
+
+fig, ax = plt.subplots(figsize=(7, 5))
+ax.spines["top"].set_visible(False)
+ax.spines["right"].set_visible(False)
+
+sc = ax.scatter(
+    aux["surface temperature"].where(mask_hc_no_lc).sel(lat=slice(-30, 30)),
+    atms["h_cloud_temperature"].where(mask_hc_no_lc).sel(lat=slice(-30, 30)),
+    s=0.5,
+    c=atms["h_cloud_top_pressure"].where(mask_hc_no_lc).sel(lat=slice(-30, 30)) / 100,
+    cmap="viridis",
+)
+
+cb = fig.colorbar(sc)
+cb.set_label("p_h / hPa")
+ax.set_xlabel("Surface Temperature / K")
+ax.set_ylabel("High Cloud Temperature / K")
+
+# %% plot corrected high cloud albedo against IWP
+albedo_corr = atms["high_cloud_albedo"] * (
+    fluxes_3d["allsky_sw_down"].isel(pressure=-1)
+    / fluxes_3d["clearsky_sw_down"].isel(pressure=-1).max()
+) 
+
+fig, ax = plt.subplots(figsize=(7, 5))
+ax.spines["top"].set_visible(False)
+ax.spines["right"].set_visible(False)
+
+sc = ax.scatter(
+    atms["IWP"].where(mask_hc_no_lc).sel(lat=slice(-30, 30)),
+    albedo_corr.where(mask_hc_no_lc).sel(lat=slice(-30, 30)),
+    s=0.5,
+    c=fluxes_3d["allsky_sw_down"]
+    .isel(pressure=-1)
+    .where(mask_hc_no_lc)
+    .sel(lat=slice(-30, 30)),
+    cmap="viridis",
+)
+cb = fig.colorbar(sc)
+cb.set_label("SWin at TOA / W m$^{-2}$")
+ax.set_xlabel("IWP / kg m$^{-2}$")
+ax.set_ylabel("High Cloud Albedo")
+ax.set_xscale("log")
+ax.set_ylim([0, 1])
+
 
 # %%

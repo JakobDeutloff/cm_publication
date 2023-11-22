@@ -88,7 +88,7 @@ def plot_profiles(lat, lon, atms, fluxes_3d):
     fig.text(
         0.9,
         0.8,
-        f"lat: {lat.round(2)}\nlon: {lon.round(2)}",
+        f"lat: {lat.round(2)}\nlon: {lon.round(2)}\nIWP: {atms.sel(lat=lat, lon=lon, method='nearest')['IWP'].values.round(2)}",
         ha="center",
         va="center",
         fontsize=11,

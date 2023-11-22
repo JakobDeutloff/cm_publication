@@ -31,8 +31,8 @@ def plot_hist(year, ax, bins, linestyle, color):
         cloudsat[year]["ice_water_path"] * 1e-3, bins=bins, density=False
     )
     hist_norm = hist / (
-        np.diff(edges) * len(cloudsat[year]["ice_water_path"]) * (1 - zeros[year])
-    )
+        len(cloudsat[year]["ice_water_path"]) * (1-zeros[year]))
+    
     ax.stairs(hist_norm, edges, label=year, linestyle=linestyle, color=color)
 
 
@@ -41,7 +41,7 @@ def calc_hist(year, bins):
         cloudsat[year]["ice_water_path"] * 1e-3, bins=bins, density=False
     )
     hist_norm = hist / (
-        np.diff(edges) * len(cloudsat[year]["ice_water_path"]) * (1 - zeros[year])
+        len(cloudsat[year]["ice_water_path"]) * (1 - zeros[year])
     )
     return hist_norm, edges
 
@@ -52,12 +52,10 @@ def plot_monthly_hists(year, ax, bins, cmap):
         mask_month = cloudsat[year].time.dt.month == month
         data = cloudsat[year][mask_month]["ice_water_path"] * 1e-3
         hist, edges = np.histogram(data, bins=bins, density=False)
-        hist_norm = hist / (np.diff(edges) * len(data))
+        hist_norm = hist / len(data)
         ax.stairs(hist_norm, edges, label=month, color=color)
         ax.set_xscale("log")
-        ax.set_yscale("log")
         ax.set_xlim(1e-5, 1e2)
-        ax.set_ylim(1e-4, 1e3)
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         ax.set_title(str(year))
@@ -91,15 +89,13 @@ sm.set_array([])
 
 # years with higher occurences: 2006, 2007, 2008, 2009, 2010, years with less data 2011, 2017
 for i, year in enumerate(range(2006, 2019)):
-    if year in [2011, 2017]:  # years with higher occurences: 2006, 2007, 2008, 2009, 2010, years with less data 2011, 2017
+    if year in [2011, 2017]:  
         pass
     else:
         plot_hist(str(year), ax, bins, "solid", color=cmap(i / 13))
 
 ax.set_xscale("log")
-ax.set_yscale("log")
 ax.set_xlim(1e-5, 1e2)
-ax.set_ylim(1e-4, 1e3)
 ax.legend()
 ax.set_xlabel("IWP / kg m$^{-2}$")
 ax.set_ylabel("Probability Density / (kg m$^{-2}$)$^{-1}$")
@@ -183,12 +179,10 @@ ax.stairs(
 
 
 ax.set_xscale("log")
-ax.set_yscale("log")
 ax.set_xlim(1e-5, 1e2)
-ax.set_ylim(1e-4, 1e3)
 ax.legend()
 ax.set_xlabel("IWP / kg m$^{-2}$")
 ax.set_ylabel("Probability Density / (kg m$^{-2}$)$^{-1}$")
-fig.savefig("plots/2c_ice_mean_std.png", dpi=300, bbox_inches="tight")
+fig.savefig("plots/2c_ice_mean_std.png", dpi=500, bbox_inches="tight")
 
 # %%
