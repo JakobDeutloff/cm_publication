@@ -38,7 +38,7 @@ p = np.polyfit(np.log10(IWP_points[mean_hc_emissivity <= 1]), mean_hc_emissivity
 def hc_emissivity(IWP, coeffs): 
     fitted_vals = np.poly1d(coeffs)(np.log10(IWP))
     fitted_vals[fitted_vals > 1] = 1
-    fitted_vals[IWP > 0.5] = 1
+    fitted_vals[IWP > 0.1] = 1
     return fitted_vals
 
 fitted_emissivity = hc_emissivity(IWP_points, p)

@@ -46,20 +46,13 @@ fig.colorbar(
 fig.tight_layout()
 fig.savefig("plots/profile_locations.png", dpi=300)
 
-# %% select profile with a certain IWP 
-IWP = 0.1  # kg m^-2
-# Calculate the absolute difference between atms['IWP'] and a
-diff = abs(atms['IWP'] - IWP)
-
-# Find the indices of the minimum difference
+# %% select and plot profile with a certain IWP 
+IWP = 1e-3  # kg m^-2
+diff = abs(atms['IWP'].where(mask_hc_no_lc) - IWP)
 min_diff_indices = diff.argmin(dim=["lat", "lon"])
-
-# Get the latitude and longitude coordinates of the minimum difference
 lat = diff["lat"].isel(lat=min_diff_indices["lat"]).values
 lon = diff["lon"].isel(lon=min_diff_indices["lon"]).values
-
-
-# %%  plot profiles at point
+#  plot profiles at point
 plot_profiles(lat, lon, atms, fluxes_3d)
 
 # %% calculate plot quantities
@@ -310,4 +303,21 @@ ax.set_xscale("log")
 ax.set_ylim([0, 1])
 
 
+# %% plot mean profiles of lw fluxes 
+
+fig, ax = plt.subplots(figsize=(7, 5))
+
+ax.plot(
+    fluxes_3d["allsky_lw_up"].sel(lat=slice(-30, 30)).mean(["lat", "lon"]),
+    fluxes_3d["allsky_lw_up"].pressure / 100,
+    label="allsky",
+)
+ax.plot(
+    fluxes_3d["clearsky_lw_up"].sel(lat=slice(-30, 30)).mean(["lat", "lon"]),
+    fluxes_3d["clearsky_lw_up"].pressure / 100,
+    label="clearsky",
+)
+
+ax.invert_yaxis()
+ax.legend()
 # %%
