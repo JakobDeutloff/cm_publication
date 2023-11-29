@@ -15,6 +15,7 @@ aux = xr.open_dataset(path_freddi + "aux.nc")
 
 # %% find profiles with high clouds and no low clouds below
 mask_hc_no_lc = (atms["IWP"] > 1e-6) & (atms["LWP"] < 1e-10)
+mask_height = ~atms["h_cloud_top_pressure"].isnull()
 
 # %% calculate mean albedos by weighting with the incoming SW radiation in IWP bins
 IWP_bins = np.logspace(-5, 1, num=50)
@@ -31,7 +32,7 @@ for i in range(len(binned_hc_albedo) - 1):
         binned_hc_albedo[i, j] = float(
             (
                 atms["high_cloud_albedo"]
-                .where(IWP_mask & SW_mask & mask_hc_no_lc)
+                .where(IWP_mask & SW_mask & mask_hc_no_lc & mask_height)
                 .sel(lat=slice(-30, 30))
             )
             .mean()
@@ -77,7 +78,7 @@ for i in range(len(binned_hc_albedo) - 1):
         binned_clearsky_sw_up[i, j] = float(
             (
                 fluxes_toa["clearsky_sw_up"]
-                .where(IWP_mask & SW_mask & mask_hc_no_lc)
+                .where(IWP_mask & SW_mask & mask_hc_no_lc & mask_height)
                 .sel(lat=slice(-30, 30))
             )
             .mean()
@@ -86,7 +87,7 @@ for i in range(len(binned_hc_albedo) - 1):
         binned_clearsky_sw_down[i, j] = float(
             (
                 fluxes_toa["clearsky_sw_down"]
-                .where(IWP_mask & SW_mask & mask_hc_no_lc)
+                .where(IWP_mask & SW_mask & mask_hc_no_lc & mask_height)
                 .sel(lat=slice(-30, 30))
             )
             .mean()
@@ -95,7 +96,7 @@ for i in range(len(binned_hc_albedo) - 1):
         binned_allsky_sw_up[i, j] = float(
             (
                 fluxes_toa["allsky_sw_up"]
-                .where(IWP_mask & SW_mask & mask_hc_no_lc)
+                .where(IWP_mask & SW_mask & mask_hc_no_lc & mask_height)
                 .sel(lat=slice(-30, 30))
             )
             .mean()
@@ -104,7 +105,7 @@ for i in range(len(binned_hc_albedo) - 1):
         binned_allsky_sw_down[i, j] = float(
             (
                 fluxes_toa["allsky_sw_down"]
-                .where(IWP_mask & SW_mask & mask_hc_no_lc)
+                .where(IWP_mask & SW_mask & mask_hc_no_lc & mask_height)
                 .sel(lat=slice(-30, 30))
             )
             .mean()
@@ -258,9 +259,10 @@ ax.set_ylabel("High Cloud Albedo")
 ax.legend()
 
 # %% fit polynom to weighted and interpolated albedo
-p = np.polyfit(np.log10(IWP_points), mean_hc_albedo_SW_interp, 5)
+iwp_mask = IWP_points <=1
+p = np.polyfit(np.log10(IWP_points[iwp_mask]), mean_hc_albedo_SW_interp[iwp_mask], 5)
 poly = np.poly1d(p)
-fitted_curve = poly(np.log10(IWP_points))
+fitted_curve = poly(np.log10(IWP_points[iwp_mask]))
 
 
 # %% plot weighted albedo in scatterplot with IWP
@@ -269,8 +271,8 @@ ax.spines["top"].set_visible(False)
 ax.spines["right"].set_visible(False)
 
 sc = ax.scatter(
-    atms["IWP"].where(mask_hc_no_lc).sel(lat=slice(-30, 30)),
-    atms["high_cloud_albedo"].where(mask_hc_no_lc).sel(lat=slice(-30, 30)),
+    atms["IWP"].where(mask_hc_no_lc & mask_height).sel(lat=slice(-30, 30)),
+    atms["high_cloud_albedo"].where(mask_hc_no_lc & mask_height).sel(lat=slice(-30, 30)),
     s=0.5,
     c=fluxes_3d.isel(pressure=-1)["allsky_sw_down"]
     .where(mask_hc_no_lc)
@@ -278,16 +280,16 @@ sc = ax.scatter(
     cmap="viridis",
 )
 
-iwp_mask = IWP_points <=1
-ax.plot(IWP_points[iwp_mask], mean_hc_albedo_SW_interp[iwp_mask], label="Average albedo", color="r")
-ax.plot(IWP_points[iwp_mask], fitted_curve[iwp_mask], label="Fitted curve", color="k")
+ax.plot(IWP_points[iwp_mask], mean_hc_albedo_SW_interp[iwp_mask], label="Mean Albedo", color="k")
+ax.plot(IWP_points[iwp_mask], fitted_curve, label="Fitted Polynomial", color="red", linestyle='--')
 
 cb = fig.colorbar(sc)
 cb.set_label("SWin at TOA / W m$^{-2}$")
 ax.set_xlabel("IWP / kg m$^{-2}$")
 ax.set_ylabel("High Cloud Albedo")
 ax.set_xscale("log")
-ax.set_xlim([1e-4, 1e1])
+ax.set_xlim([1e-5, 1e1])
+ax.legend()
 fig.tight_layout()
 
 # %% save coefficients as pkl file

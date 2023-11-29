@@ -12,8 +12,9 @@ fluxes_3d = xr.open_dataset(path_freddi + "fluxes_3d_full.nc")
 fluxes_2d = xr.open_dataset(path_freddi + "fluxes_2d.nc")
 aux = xr.open_dataset(path_freddi + "aux.nc")
 
-# %% find profiles with high clouds and no low clouds below
+# %% find profiles with high clouds and no low clouds below and above 8 km
 mask_hc_no_lc = (atms["IWP"] > 1e-6) & (atms["LWP"] < 1e-10)
+mask_height = ~atms["h_cloud_top_pressure"].isnull()
 
 # %% find longitude of the sun
 fluxes_toa = fluxes_3d.isel(pressure=-1)
@@ -33,7 +34,7 @@ for i in range(len(IWP_bins) - 1):
         cre['all'][i, j] = float(
             (
                 atms["cloud_rad_effect"]
-                .where(IWP_mask & lon_mask & mask_hc_no_lc)
+                .where(IWP_mask & lon_mask & mask_hc_no_lc & mask_height)
                 .sel(lat=slice(-30, 30))
             )
             .mean()
@@ -42,7 +43,7 @@ for i in range(len(IWP_bins) - 1):
         cre['sw'][i, j] = float(
             (
                 atms["sw_cloud_rad_effect"]
-                .where(IWP_mask & lon_mask & mask_hc_no_lc)
+                .where(IWP_mask & lon_mask & mask_hc_no_lc & mask_height)
                 .sel(lat=slice(-30, 30))
             )
             .mean()
@@ -51,7 +52,7 @@ for i in range(len(IWP_bins) - 1):
         cre['lw'][i, j] = float(
             (
                 atms["lw_cloud_rad_effect"]
-                .where(IWP_mask & lon_mask & mask_hc_no_lc)
+                .where(IWP_mask & lon_mask & mask_hc_no_lc & mask_height)
                 .sel(lat=slice(-30, 30))
             )
             .mean()
@@ -121,8 +122,8 @@ ax.spines["top"].set_visible(False)
 ax.spines["right"].set_visible(False)
 
 sc = ax.scatter(
-    atms["IWP"].where(mask_hc_no_lc).sel(lat=slice(-30, 30)),
-    (atms["cloud_rad_effect"]).where(mask_hc_no_lc).sel(lat=slice(-30, 30)),
+    atms["IWP"].where(mask_hc_no_lc & mask_height).sel(lat=slice(-30, 30)),
+    (atms["cloud_rad_effect"]).where(mask_hc_no_lc & mask_height).sel(lat=slice(-30, 30)),
     s=0.5,
     c=fluxes_3d.isel(pressure=-1)["allsky_sw_down"]
     .where(mask_hc_no_lc)

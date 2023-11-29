@@ -13,11 +13,12 @@ fluxes_3d = xr.open_dataset(path_freddi + "fluxes_3d_full.nc")
 fluxes_2d = xr.open_dataset(path_freddi + "fluxes_2d.nc")
 aux = xr.open_dataset(path_freddi + "aux.nc")
 
-# %% find high clouds with no low clouds below
+# %% find high clouds with no low clouds below and above 8 km
 mask_hc_no_lc = (atms["IWP"] > 1e-6) & (atms["LWP"] < 1e-10)
+mask_height = ~atms["h_cloud_top_pressure"].isnull()
 lon_3d, lat_3d = np.meshgrid(atms["lon"], atms["lat"])
-lons = lon_3d[mask_hc_no_lc]
-lats = lat_3d[mask_hc_no_lc]
+lons = lon_3d[mask_hc_no_lc & mask_height]
+lats = lat_3d[mask_hc_no_lc & mask_height]
 
 # %% plot location of profiles
 fig, ax = plt.subplots(figsize=(12, 4), subplot_kw={"projection": ccrs.PlateCarree()})
@@ -29,7 +30,7 @@ cont = (
     .isel(pressure=-1)
     .sel(lat=slice(-30, 30))
     .plot.contourf(
-        ax=ax, transform=ccrs.PlateCarree(), cmap="viridis", add_colorbar=False
+        ax=ax, transform=ccrs.PlateCarree(), cmap="viridis", add_colorbar=False, levels=20
     )
 )
 ax.scatter(lons, lats, s=0.1, color="red", marker="o")
@@ -39,7 +40,7 @@ ax.coastlines()
 gl = ax.gridlines(draw_labels=True)
 gl.top_labels = False
 gl.right_labels = False
-ax.set_title("Profiles with IWP > 1e-6 kg m$^{-2}$ and LWP < 1e-10 kg m$^{-2}$")
+ax.set_title("Profiles with IWP > 1e-6 kg m$^{-2}$ and LWP < 1e-10 kg m$^{-2}$ and max IWC above 8 km")
 fig.colorbar(
     cont, label="SWin at TOA / W m$^{-2}$", orientation="horizontal", shrink=0.5
 )
@@ -47,8 +48,8 @@ fig.tight_layout()
 fig.savefig("plots/profile_locations.png", dpi=300)
 
 # %% select and plot profile with a certain IWP 
-IWP = 1e-3  # kg m^-2
-diff = abs(atms['IWP'].where(mask_hc_no_lc) - IWP)
+IWP = 0.1  # kg m^-2
+diff = abs(atms['IWP'].where(mask_hc_no_lc & mask_height) - IWP)
 min_diff_indices = diff.argmin(dim=["lat", "lon"])
 lat = diff["lat"].isel(lat=min_diff_indices["lat"]).values
 lon = diff["lon"].isel(lon=min_diff_indices["lon"]).values
@@ -303,21 +304,41 @@ ax.set_xscale("log")
 ax.set_ylim([0, 1])
 
 
-# %% plot mean profiles of lw fluxes 
+# %% plot lw radiation profiles and hydrometeors at a certain IWP
 
-fig, ax = plt.subplots(figsize=(7, 5))
+IWP = 5e-1  # kg m^-2
+diff = abs(atms['IWP'].where(mask_hc_no_lc).sel(lat=slice(-30, 30)) - IWP)
+min_diff_indices = diff.argmin(dim=["lat", "lon"])
+lat = diff["lat"].isel(lat=min_diff_indices["lat"]).values
+lon = diff["lon"].isel(lon=min_diff_indices["lon"]).values
 
-ax.plot(
-    fluxes_3d["allsky_lw_up"].sel(lat=slice(-30, 30)).mean(["lat", "lon"]),
-    fluxes_3d["allsky_lw_up"].pressure / 100,
-    label="allsky",
-)
-ax.plot(
-    fluxes_3d["clearsky_lw_up"].sel(lat=slice(-30, 30)).mean(["lat", "lon"]),
-    fluxes_3d["clearsky_lw_up"].pressure / 100,
-    label="clearsky",
-)
+#  plot profiles at point
+fig, axes = plt.subplots(1, 3, figsize=(10, 5), sharey="row")
 
-ax.invert_yaxis()
-ax.legend()
-# %%
+axes[0].plot(atms["IWC"].sel(lat=lat, lon=lon), atms["IWC"].pressure / 100, color="black", label='IWC')
+axes[0].plot(atms["graupel"].sel(lat=lat, lon=lon), atms["graupel"].pressure / 100, color="black", linestyle='--', label='Graupel')
+axes[0].plot(atms["snow"].sel(lat=lat, lon=lon), atms["snow"].pressure / 100, color="black", linestyle=':', label='Snow')
+axes[0].axhline(atms["IWC"].sel(lat=lat, lon=lon).idxmax()/100, color='orange', linestyle='--')
+axes[0].set_title('Hydrometeors')
+axes[0].set_xlabel("Mass mixing ratio / kg kg$^{-1}$")
+axes[0].set_ylabel("Pressure / hPa")
+
+axes[1].plot(fluxes_3d["allsky_lw_down"].sel(lat=lat, lon=lon), fluxes_3d["allsky_lw_down"].pressure / 100, color="black", label='Allsky')
+axes[1].plot(fluxes_3d["clearsky_lw_down"].sel(lat=lat, lon=lon), fluxes_3d["clearsky_lw_down"].pressure / 100, color="black", linestyle='--', label='Clearsky')
+axes[1].set_title('LW down')
+axes[1].set_xlabel("LW flux / W m$^{-2}$")
+
+axes[2].plot(fluxes_3d["allsky_lw_up"].sel(lat=lat, lon=lon), fluxes_3d["allsky_lw_up"].pressure / 100, color="black", label='Allsky')
+axes[2].plot(fluxes_3d["clearsky_lw_up"].sel(lat=lat, lon=lon), fluxes_3d["clearsky_lw_up"].pressure / 100, color="black", linestyle='--', label='Clearsky')
+axes[2].axhline(atms['h_cloud_top_pressure'].sel(lat=lat, lon=lon)/100, color='lime', linestyle='--')
+axes[2].set_title('LW up')
+axes[2].set_xlabel("LW flux / W m$^{-2}$")
+
+for ax in axes:
+    ax.invert_yaxis()
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.legend()
+
+
+# %%  

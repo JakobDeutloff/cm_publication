@@ -35,6 +35,7 @@ def plot_profiles(lat, lon, atms, fluxes_3d):
     axes[1, 0].plot(
         fluxes["clearsky_lw_up"], height, label="clearsky", color="k", linestyle="--"
     )
+    axes[1, 0].plot()
     axes[1, 0].set_xlabel("LW Up / W m$^{-2}$")
     axes[1, 0].legend()
 

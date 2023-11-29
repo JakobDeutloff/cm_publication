@@ -98,7 +98,7 @@ ax.set_xscale("log")
 ax.set_xlim(1e-5, 1e2)
 ax.legend()
 ax.set_xlabel("IWP / kg m$^{-2}$")
-ax.set_ylabel("Probability Density / (kg m$^{-2}$)$^{-1}$")
+ax.set_ylabel("Relative Frequency")
 
 fig.savefig("plots/2c_ice_interannual.png", dpi=300, bbox_inches="tight")
 
