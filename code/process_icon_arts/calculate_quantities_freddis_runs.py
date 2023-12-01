@@ -5,11 +5,11 @@ import numpy as np
 import cartopy.crs as ccrs
 
 # %% load data from freddis runs
-path_freddi = "/work/bm1183/m301049/freddi_runs/"
-atms = xr.open_dataset(path_freddi + "atms.nc")
-fluxes_3d = xr.open_dataset(path_freddi + "fluxes_3d.nc")
-fluxes_2d = xr.open_dataset(path_freddi + "fluxes_2d.nc")
-aux = xr.open_dataset(path_freddi + "aux.nc")
+path_freddi = "/work/bm1183/m301049/icon_arts_processed/"
+run = "fullrange_flux_mid1deg_noice/"
+atms = xr.open_dataset(path_freddi + run + "atms.nc")
+fluxes_3d = xr.open_dataset(path_freddi + run + "fluxes_3d.nc")
+aux = xr.open_dataset(path_freddi + run + "aux.nc")
 
 # %% change convention of fluxes - down is positive
 fluxes = [

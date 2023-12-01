@@ -7,10 +7,9 @@ from src.plot_functions import plot_profiles
 from cmocean import cm
 
 # %% load data from freddis runs
-path_freddi = "/work/bm1183/m301049/freddi_runs/"
+path_freddi = "/work/bm1183/m301049/icon_arts_processed/"
 atms = xr.open_dataset(path_freddi + "atms_full.nc")
 fluxes_3d = xr.open_dataset(path_freddi + "fluxes_3d_full.nc")
-fluxes_2d = xr.open_dataset(path_freddi + "fluxes_2d.nc")
 aux = xr.open_dataset(path_freddi + "aux.nc")
 
 # %% find high clouds with no low clouds below and above 8 km
