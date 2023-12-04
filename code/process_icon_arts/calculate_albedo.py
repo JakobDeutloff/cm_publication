@@ -17,6 +17,20 @@ aux = xr.open_dataset(path_freddi + "aux.nc")
 mask_hc_no_lc = (atms["IWP"] > 1e-6) & (atms["LWP"] < 1e-10)
 mask_height = ~atms["h_cloud_top_pressure"].isnull()
 
+
+# %% calculate high cloud albedo
+atms["clearsky_albedo"] = np.abs(
+    fluxes_3d.isel(pressure=-1)["clearsky_sw_up"]
+    / fluxes_3d.isel(pressure=-1)["clearsky_sw_down"]
+)
+atms["allsky_albedo"] = np.abs(
+    fluxes_3d.isel(pressure=-1)["allsky_sw_up"]
+    / fluxes_3d.isel(pressure=-1)["allsky_sw_down"]
+)
+atms["high_cloud_albedo"] = (atms["allsky_albedo"] - atms["clearsky_albedo"]) / (
+    1 - atms["clearsky_albedo"]
+)
+
 # %% calculate mean albedos by weighting with the incoming SW radiation in IWP bins
 IWP_bins = np.logspace(-5, 1, num=50)
 IWP_points = (IWP_bins[1:] + IWP_bins[:-1]) / 2

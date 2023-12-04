@@ -8,16 +8,16 @@ from cmocean import cm
 
 # %% load data from freddis runs
 path_freddi = "/work/bm1183/m301049/icon_arts_processed/"
-atms = xr.open_dataset(path_freddi + "atms_full.nc")
-fluxes_3d = xr.open_dataset(path_freddi + "fluxes_3d_full.nc")
-aux = xr.open_dataset(path_freddi + "aux.nc")
+run = "fullrange_flux_mid1deg_noice/"
+atms = xr.open_dataset(path_freddi + run + "atms_full.nc")
+fluxes_3d = xr.open_dataset(path_freddi + run + "fluxes_3d_full.nc")
+aux = xr.open_dataset(path_freddi + run +  "aux.nc")
 
 # %% find high clouds with no low clouds below and above 8 km
 mask_hc_no_lc = (atms["IWP"] > 1e-6) & (atms["LWP"] < 1e-10)
-mask_height = ~atms["h_cloud_top_pressure"].isnull()
 lon_3d, lat_3d = np.meshgrid(atms["lon"], atms["lat"])
-lons = lon_3d[mask_hc_no_lc & mask_height]
-lats = lat_3d[mask_hc_no_lc & mask_height]
+lons = lon_3d[mask_hc_no_lc]
+lats = lat_3d[mask_hc_no_lc]
 
 # %% plot location of profiles
 fig, ax = plt.subplots(figsize=(12, 4), subplot_kw={"projection": ccrs.PlateCarree()})
@@ -46,9 +46,15 @@ fig.colorbar(
 fig.tight_layout()
 fig.savefig("plots/profile_locations.png", dpi=300)
 
+# %% plot differences of toa lw out at profiles with no lc below
+fig, ax = plt.subplots()
+
+diffs = (fluxes_3d["allsky_lw_up"].isel(pressure=-1) - fluxes_3d["clearsky_lw_up"].isel(pressure=-1)).where(mask_hc_no_lc)
+diffs.plot.hist(ax=ax, bins=100)
+
 # %% select and plot profile with a certain IWP 
-IWP = 0.1  # kg m^-2
-diff = abs(atms['IWP'].where(mask_hc_no_lc & mask_height) - IWP)
+IWP = 2e-2  # kg m^-2
+diff = abs(atms['IWP'].where(mask_hc_no_lc) - IWP)
 min_diff_indices = diff.argmin(dim=["lat", "lon"])
 lat = diff["lat"].isel(lat=min_diff_indices["lat"]).values
 lon = diff["lon"].isel(lon=min_diff_indices["lon"]).values
