@@ -5,11 +5,11 @@ import pickle
 import matplotlib.pyplot as plt
 
 # %% load freddis data
-path_freddi = "/work/bm1183/m301049/freddi_runs/"
-atms = xr.open_dataset(path_freddi + "atms_full.nc")
-fluxes_3d = xr.open_dataset(path_freddi + "fluxes_3d_full.nc")
-fluxes_2d = xr.open_dataset(path_freddi + "fluxes_2d.nc")
-aux = xr.open_dataset(path_freddi + "aux.nc")
+path = "/work/bm1183/m301049/icon_arts_processed/"
+run = "fullrange_flux_mid1deg_noice/"
+atms = xr.open_dataset(path + run + "atms_full.nc")
+fluxes_3d = xr.open_dataset(path + run + "fluxes_3d_full.nc")
+aux = xr.open_dataset(path + run + "aux.nc")
 
 # %% load coeffs of albedo and emissivity and cre
 with open("data/fitted_albedo.pkl", "rb") as f:

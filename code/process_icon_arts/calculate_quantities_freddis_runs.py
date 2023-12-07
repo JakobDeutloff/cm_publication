@@ -26,12 +26,11 @@ for flux in fluxes:
     fluxes_3d[flux] = fluxes_3d[flux] * -1
 
 # %% calculate IWP and LWP
-cell_height = atms["geometric height"].diff(
-    "pressure"
-)  # not correct, we would need height ad half levels
-atms["IWP"] = ((atms["IWC"] + atms["snow"] + atms["graupel"]) * cell_height).sum(
-    "pressure"
-)
+cell_height = atms["geometric height"].diff("pressure")  # not correct, we would need height ad half levels
+atms["IWP"] = ((atms["IWC"] + atms["snow"] + atms["graupel"]) * cell_height).sum("pressure")
+atms['IWC_cumsum'] = (atms["IWC"] * cell_height).cumsum('pressure')
+atms['IWC_cumsum'] = atms['IWC_cumsum'].where(~atms['IWC_cumsum'].isnull(), 0)
+atms['IWC_cumsum'] = -1 * (atms['IWC_cumsum'] - atms['IWC_cumsum'].isel(pressure=-1))
 atms["LWP"] = ((atms["rain"] + atms["LWC"]) * cell_height).sum("pressure")
 
 # %% calculate heating rates from fluxes (vertical levels are not quite correct)

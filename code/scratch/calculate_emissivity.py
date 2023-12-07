@@ -6,31 +6,17 @@ from scipy.interpolate import griddata
 import pickle
 
 # %% load freddis data
-path_freddi = "/work/bm1183/m301049/freddi_runs/"
-atms = xr.open_dataset(path_freddi + "atms_full.nc")
-fluxes_3d = xr.open_dataset(path_freddi + "fluxes_3d_full.nc")
-fluxes_2d = xr.open_dataset(path_freddi + "fluxes_2d.nc")
-aux = xr.open_dataset(path_freddi + "aux.nc")
+path = "/work/bm1183/m301049/icon_arts_processed/"
+run = "fullrange_flux_mid1deg/"
+atms = xr.open_dataset(path + run + "atms_full.nc")
+fluxes_3d = xr.open_dataset(path + run + "fluxes_3d_full.nc")
+run = "fullrange_flux_mid1deg_noice/"
+fluxes_3d_noice = xr.open_dataset(path + run + "fluxes_3d_full.nc")
 
 # %% find profiles with high clouds and no low clouds below and above 8 km
 mask_hc_no_lc = (atms["IWP"] > 1e-6) & (atms["LWP"] < 1e-10)
-mask_height = ~atms["h_cloud_top_pressure"].isnull()
-
-# %% reduction of outgoing longwave radiation from clearsky profile
-clearsky_lw_out = fluxes_3d["clearsky_lw_up"].mean(["lat", "lon"])
-reduction_fraction = (
-    clearsky_lw_out - clearsky_lw_out.isel(pressure=-1)
-) / clearsky_lw_out
-
-fig, ax = plt.subplots()
-ax.plot(reduction_fraction, clearsky_lw_out.pressure)
-ax.invert_yaxis()
-
-# %% Exclude clouds below 8 km
-min_height = 8e3  # m
-p_iwc_max = atms["IWC"].argmax("pressure")
-p_iwc_max = p_iwc_max.fillna(80)
-height_mask = atms["geometric height"].isel(pressure=p_iwc_max) > min_height
+idx_height = atms["IWC"].argmax("pressure")
+mask_height = atms["geometric height"].isel(pressure=idx_height) >= 8e3
 
 # %% calculate high cloud temperature from LW out differences
 diff_at_cloud_top = 0.9  # fraction of LW out difference at cloud top compared to toa
@@ -41,9 +27,9 @@ bool_lw_out = lw_out_diff_frac < diff_at_cloud_top
 # find lowest pressure where bool_lw_out is true
 p_top = bool_lw_out.pressure.where(bool_lw_out).min("pressure")
 p_top = p_top.fillna(atms.pressure.max())
-T_h_lw = atms["temperature"].sel(pressure=p_top).where(height_mask)
+T_h_lw = atms["temperature"].sel(pressure=p_top).where(mask_height)
 atms["h_cloud_temperature"] = T_h_lw 
-atms["h_cloud_top_pressure"] = p_top.where(height_mask)
+atms["h_cloud_top_pressure"] = p_top.where(mask_height)
 
 # %% calculate high cloud emissivity
 idx_p_tropopause = atms['temperature'].sel(lat=slice(-30, 30)).mean(['lat', 'lon']).argmin('pressure')
@@ -52,7 +38,6 @@ sigma = 5.67e-8  # W m-2 K-4
 LW_out_as = fluxes_3d.isel(pressure=-1)["allsky_lw_up"]
 LW_out_cs = fluxes_3d.isel(pressure=-1)["clearsky_lw_up"]
 correction = LW_out_as - fluxes_3d.sel(pressure=atms["h_cloud_top_pressure"], method='nearest')["allsky_lw_up"]
-reduction = 1  #- reduction_fraction.sel(pressure=p_top) # reduction of LW out due to clearsky profile
 rad_hc = -atms["h_cloud_temperature"] ** 4 * sigma 
 atms["high_cloud_emissivity"] = (LW_out_as - correction - LW_out_cs) / (rad_hc - LW_out_cs)
 atms['rad_correction'] = correction
@@ -65,9 +50,9 @@ ax.spines["top"].set_visible(False)
 ax.spines["right"].set_visible(False)
 
 sc = ax.scatter(
-    atms["IWP"].where(mask_hc_no_lc & height_mask).sel(lat=slice(-30, 30)),
+    atms["IWP"].where(mask_hc_no_lc & mask_height).sel(lat=slice(-30, 30)),
     atms["high_cloud_emissivity"]
-    .where(mask_hc_no_lc & height_mask)
+    .where(mask_hc_no_lc & mask_height)
     .sel(lat=slice(-30, 30)),
     s=0.5,
     c=fluxes_3d["allsky_sw_down"]
@@ -89,9 +74,11 @@ fig, ax = plt.subplots(figsize=(7, 5))
 ax.spines["top"].set_visible(False)
 ax.spines["right"].set_visible(False)
 
-sc = ax.scatter(atms["IWP"].where(mask_hc_no_lc & height_mask).sel(lat=slice(-30, 30)),
-                correction.where(mask_hc_no_lc & height_mask).sel(lat=slice(-30, 30)))
+sc = ax.scatter(atms["IWP"].where(mask_hc_no_lc & mask_height).sel(lat=slice(-30, 30)),
+                correction.where(mask_hc_no_lc & mask_height).sel(lat=slice(-30, 30)))
 ax.set_xscale("log")
+ax.set_xlabel("IWP / kg m$^{-2}$")
+ax.set_ylabel("C / W m$^{-2}$")
 
 # %% aveage over IWP bins 
 IWP_bins = np.logspace(-5, 1, num=50)
@@ -184,18 +171,12 @@ sc = ax.scatter(
     .where(mask_hc_no_lc & mask_height)
     .sel(lat=slice(-30, 30)),
     s=0.5,
-    c=fluxes_3d["allsky_sw_down"]
-    .isel(pressure=-1)
-    .where(mask_hc_no_lc & mask_height)
-    .sel(lat=slice(-30, 30)),
-    cmap="viridis",
+    color='k'
 )
 
 ax.plot(IWP_points, mean_correction_factor, color="lime", label="Mean Correction Factor")
 ax.plot(IWP_points, fitted_correction_factor, color="r", label="Fitted Polynomial", linestyle='--')
 
-cb = fig.colorbar(sc)
-cb.set_label("SWin at TOA / W m$^{-2}$")
 ax.set_xlabel("IWP / kg m$^{-2}$")
 ax.set_ylabel("Correction Factor")
 ax.set_xscale("log")

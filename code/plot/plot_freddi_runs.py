@@ -8,10 +8,10 @@ from cmocean import cm
 
 # %% load data from freddis runs
 path_freddi = "/work/bm1183/m301049/icon_arts_processed/"
-run = "fullrange_flux_mid1deg_noice/"
+run = "fullrange_flux_mid1deg/"
 atms = xr.open_dataset(path_freddi + run + "atms_full.nc")
 fluxes_3d = xr.open_dataset(path_freddi + run + "fluxes_3d_full.nc")
-aux = xr.open_dataset(path_freddi + run +  "aux.nc")
+lw_vars = xr.open_dataset("data/lw_vars.nc")
 
 # %% find high clouds with no low clouds below and above 8 km
 mask_hc_no_lc = (atms["IWP"] > 1e-6) & (atms["LWP"] < 1e-10)
@@ -333,9 +333,9 @@ axes[1].plot(fluxes_3d["clearsky_lw_down"].sel(lat=lat, lon=lon), fluxes_3d["cle
 axes[1].set_title('LW down')
 axes[1].set_xlabel("LW flux / W m$^{-2}$")
 
-axes[2].plot(fluxes_3d["allsky_lw_up"].sel(lat=lat, lon=lon), fluxes_3d["allsky_lw_up"].pressure / 100, color="black", label='Allsky')
-axes[2].plot(fluxes_3d["clearsky_lw_up"].sel(lat=lat, lon=lon), fluxes_3d["clearsky_lw_up"].pressure / 100, color="black", linestyle='--', label='Clearsky')
-axes[2].axhline(atms['h_cloud_top_pressure'].sel(lat=lat, lon=lon)/100, color='lime', linestyle='--')
+axes[2].plot(-fluxes_3d["allsky_lw_up"].sel(lat=lat, lon=lon), fluxes_3d["allsky_lw_up"].pressure / 100, color="black", label='Allsky')
+axes[2].plot(-fluxes_3d["clearsky_lw_up"].sel(lat=lat, lon=lon), fluxes_3d["clearsky_lw_up"].pressure / 100, color="black", linestyle='--', label='Clearsky')
+axes[2].axhline(lw_vars['h_cloud_top_pressure'].sel(lat=lat, lon=lon)/100, color='lime', linestyle='--')
 axes[2].set_title('LW up')
 axes[2].set_xlabel("LW flux / W m$^{-2}$")
 
