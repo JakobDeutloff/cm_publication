@@ -51,6 +51,7 @@ rad_hc = -lw_vars["h_cloud_temperature"] ** 4 * sigma
 hc_emissivity = (LW_out_as - LW_out_cs) / (rad_hc - LW_out_cs)
 lw_vars["high_cloud_emissivity"] = hc_emissivity
 lw_vars["rad_correction"] = correction
+lw_vars["mask_valid"] = mask_valid
 
 # %% aveage over IWP bins
 IWP_bins = np.logspace(-5, 1, num=50)

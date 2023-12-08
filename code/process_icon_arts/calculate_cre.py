@@ -13,6 +13,7 @@ fluxes_3d = xr.open_dataset(path + run + "fluxes_3d_full.nc")
 # noice fluxes
 run = "fullrange_flux_mid1deg_noice/"
 fluxes_3d_noice = xr.open_dataset(path + run + "fluxes_3d_full.nc")
+lw_vars = xr.open_dataset("data/lw_vars.nc")
 
 # %% calculate cre
 fluxes_toa = fluxes_3d.isel(pressure=-1)
@@ -23,14 +24,11 @@ cre_noice = cre_clearsky.copy()
 cre_clearsky = calc_cre(fluxes_toa, mode='clearsky')
 cre_noice = calc_cre(fluxes_toa, fluxes_toa_noice, mode='noice')
 
-# %% find profiles with high clouds and no low clouds below and above 8 km
-idx_height = atms["IWC"].argmax("pressure")
-mask_height = atms["geometric height"].isel(pressure=idx_height) >= 8e3
-
 # %% calculate cre in bins and interpolate
 IWP_bins = np.logspace(-5, 2, num=50)
 IWP_points = (IWP_bins[1:] + IWP_bins[:-1]) / 2
 lon_bins = np.linspace(-180, 180, num=36)
+lon_points = (lon_bins[1:] + lon_bins[:-1]) / 2
 
 cre_binned = {}
 cre_interpolated = {}
@@ -38,7 +36,7 @@ cre_interpolated_average = {}
 
 # %% all clouds
 cre_binned["all"], cre_interpolated["all"], cre_interpolated_average["all"] = bin_and_average_cre(
-    cre_noice.where(mask_height).sel(lat=slice(-30, 30)),
+    cre_noice.where(lw_vars['mask_valid']).sel(lat=slice(-30, 30)),
     IWP_bins,
     lon_bins,
     atms,
@@ -46,7 +44,7 @@ cre_binned["all"], cre_interpolated["all"], cre_interpolated_average["all"] = bi
 )
 # %% high cloud with no low coud below
 cre_binned["ice_only"], cre_interpolated["ice_only"], cre_interpolated_average["ice_only"] = bin_and_average_cre(
-    cre_noice.where(mask_height).sel(lat=slice(-30, 30)),
+    cre_noice.where(lw_vars['mask_valid']).sel(lat=slice(-30, 30)),
     IWP_bins,
     lon_bins,
     atms,
@@ -54,7 +52,7 @@ cre_binned["ice_only"], cre_interpolated["ice_only"], cre_interpolated_average["
 )
 # %% high cloud over low cloud
 cre_binned["ice_over_lc"], cre_interpolated["ice_over_lc"], cre_interpolated_average["ice_over_lc"] = bin_and_average_cre(
-    cre_noice.where(mask_height).sel(lat=slice(-30, 30)),
+    cre_noice.where(lw_vars['mask_valid']).sel(lat=slice(-30, 30)),
     IWP_bins,
     lon_bins,
     atms,
@@ -204,9 +202,55 @@ fig.legend(handles, labels, loc="lower center", ncol=3, bbox_to_anchor=(0.5, -0.
 fig.savefig("plots/mean_CRE_vs_IWP.png", dpi=300, bbox_inches="tight")
 
 
-# %% save mean CRE
-with open("data/hc_cre.pkl", "wb") as f:
-    pickle.dump([IWP_points, cre_interpolated_average], f)
+# %% build dataset of CREs and save it 
+cre_xr = xr.Dataset()
+cre_xr['net_clearsky'] = cre_clearsky['net']
+cre_xr['net_noice'] = cre_noice['net']
+cre_xr['sw_clearsky'] = cre_clearsky['sw']
+cre_xr['sw_noice'] = cre_noice['sw']
+cre_xr['lw_clearsky'] = cre_clearsky['lw']
+cre_xr['lw_noice'] = cre_noice['lw']
+
+cre_binned_xr = xr.Dataset()
+cre_binned_xr['all_sw'] = xr.DataArray(data=cre_binned['all']['sw'], coords={'IWP': IWP_points, 'lon': lon_points})
+cre_binned_xr['all_lw'] = xr.DataArray(data=cre_binned['all']['lw'], coords={'IWP': IWP_points, 'lon': lon_points})
+cre_binned_xr['all_net'] = xr.DataArray(data=cre_binned['all']['net'], coords={'IWP': IWP_points, 'lon': lon_points})
+cre_binned_xr['ice_only_sw'] = xr.DataArray(data=cre_binned['ice_only']['sw'], coords={'IWP': IWP_points, 'lon': lon_points})
+cre_binned_xr['ice_only_lw'] = xr.DataArray(data=cre_binned['ice_only']['lw'], coords={'IWP': IWP_points, 'lon': lon_points})
+cre_binned_xr['ice_only_net'] = xr.DataArray(data=cre_binned['ice_only']['net'], coords={'IWP': IWP_points, 'lon': lon_points})
+cre_binned_xr['ice_over_lc_sw'] = xr.DataArray(data=cre_binned['ice_over_lc']['sw'], coords={'IWP': IWP_points, 'lon': lon_points})
+cre_binned_xr['ice_over_lc_lw'] = xr.DataArray(data=cre_binned['ice_over_lc']['lw'], coords={'IWP': IWP_points, 'lon': lon_points})
+cre_binned_xr['ice_over_lc_net'] = xr.DataArray(data=cre_binned['ice_over_lc']['net'], coords={'IWP': IWP_points, 'lon': lon_points})
+
+cre_interpolated_xr = xr.Dataset()
+cre_interpolated_xr['all_sw'] = xr.DataArray(data=cre_interpolated['all']['sw'], coords={'IWP': IWP_points, 'lon': lon_points})
+cre_interpolated_xr['all_lw'] = xr.DataArray(data=cre_interpolated['all']['lw'], coords={'IWP': IWP_points, 'lon': lon_points})
+cre_interpolated_xr['all_net'] = xr.DataArray(data=cre_interpolated['all']['net'], coords={'IWP': IWP_points, 'lon': lon_points})
+cre_interpolated_xr['ice_only_sw'] = xr.DataArray(data=cre_interpolated['ice_only']['sw'], coords={'IWP': IWP_points, 'lon': lon_points})
+cre_interpolated_xr['ice_only_lw'] = xr.DataArray(data=cre_interpolated['ice_only']['lw'], coords={'IWP': IWP_points, 'lon': lon_points})
+cre_interpolated_xr['ice_only_net'] = xr.DataArray(data=cre_interpolated['ice_only']['net'], coords={'IWP': IWP_points, 'lon': lon_points})
+cre_interpolated_xr['ice_over_lc_sw'] = xr.DataArray(data=cre_interpolated['ice_over_lc']['sw'], coords={'IWP': IWP_points, 'lon': lon_points})
+cre_interpolated_xr['ice_over_lc_lw'] = xr.DataArray(data=cre_interpolated['ice_over_lc']['lw'], coords={'IWP': IWP_points, 'lon': lon_points})
+cre_interpolated_xr['ice_over_lc_net'] = xr.DataArray(data=cre_interpolated['ice_over_lc']['net'], coords={'IWP': IWP_points, 'lon': lon_points})
+
+cre_interpolated_average_xr = xr.Dataset()
+cre_interpolated_average_xr['all_sw'] = xr.DataArray(data=cre_interpolated_average['all']['sw'], coords={'IWP': IWP_points})
+cre_interpolated_average_xr['all_lw'] = xr.DataArray(data=cre_interpolated_average['all']['lw'], coords={'IWP': IWP_points})
+cre_interpolated_average_xr['all_net'] = xr.DataArray(data=cre_interpolated_average['all']['net'], coords={'IWP': IWP_points})
+cre_interpolated_average_xr['ice_only_sw'] = xr.DataArray(data=cre_interpolated_average['ice_only']['sw'], coords={'IWP': IWP_points})
+cre_interpolated_average_xr['ice_only_lw'] = xr.DataArray(data=cre_interpolated_average['ice_only']['lw'], coords={'IWP': IWP_points})
+cre_interpolated_average_xr['ice_only_net'] = xr.DataArray(data=cre_interpolated_average['ice_only']['net'], coords={'IWP': IWP_points})
+cre_interpolated_average_xr['ice_over_lc_sw'] = xr.DataArray(data=cre_interpolated_average['ice_over_lc']['sw'], coords={'IWP': IWP_points})
+cre_interpolated_average_xr['ice_over_lc_lw'] = xr.DataArray(data=cre_interpolated_average['ice_over_lc']['lw'], coords={'IWP': IWP_points})
+cre_interpolated_average_xr['ice_over_lc_net'] = xr.DataArray(data=cre_interpolated_average['ice_over_lc']['net'], coords={'IWP': IWP_points})
+
+cre_xr.to_netcdf('data/cre.nc')
+cre_binned_xr.to_netcdf('data/cre_binned.nc')
+cre_interpolated_xr.to_netcdf('data/cre_interpolated.nc')
+cre_interpolated_average_xr.to_netcdf('data/cre_interpolated_average.nc')
+
+
+
 
 
 # %%
