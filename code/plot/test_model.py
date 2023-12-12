@@ -9,7 +9,8 @@ path = "/work/bm1183/m301049/icon_arts_processed/"
 run = "fullrange_flux_mid1deg_noice/"
 atms = xr.open_dataset(path + run + "atms_full.nc")
 fluxes_3d = xr.open_dataset(path + run + "fluxes_3d_full.nc")
-aux = xr.open_dataset(path + run + "aux.nc")
+lw_vars = xr.open_dataset("data/lw_vars.nc")
+cre = xr.open_dataset("data/cre_interpolated_average.nc")
 
 # %% load coeffs of albedo and emissivity and cre
 with open("data/fitted_albedo.pkl", "rb") as f:
@@ -20,15 +21,6 @@ with open("data/fitted_emissivity.pkl", "rb") as f:
 
 with open("data/fitted_correction_factor.pkl", "rb") as f:
     correction_coeffs = pickle.load(f)
-
-with open("data/hc_cre.pkl", "rb") as f:
-    cre = pickle.load(f)
-
-with open("data/hc_cre_sw.pkl", "rb") as f:
-    cre_sw = pickle.load(f)
-
-with open("data/hc_cre_lw.pkl", "rb") as f:
-    cre_lw = pickle.load(f)
 
 
 # %% define functions of albedo and emissivity

@@ -132,6 +132,7 @@ ax.set_xscale("log")
 ax.set_xlim(1e-5, 10)
 ax.set_ylim(-0.2, 1.5)
 ax.legend()
+fig.savefig("plots/emissivity.png", dpi=300, bbox_inches="tight")
 
 # %% plot mean correction factior in scatterplot with IWP
 fig, ax = plt.subplots(figsize=(7, 5))
@@ -160,6 +161,7 @@ ax.set_xlabel("IWP / kg m$^{-2}$")
 ax.set_ylabel("Correction Factor")
 ax.set_xscale("log")
 ax.legend()
+fig.savefig("plots/correction_factor.png", dpi=300, bbox_inches="tight")
 
 # %% save coefficients as pkl file
 with open("data/fitted_emissivity.pkl", "wb") as f:

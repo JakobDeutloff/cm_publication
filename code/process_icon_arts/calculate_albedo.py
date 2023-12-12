@@ -7,28 +7,30 @@ from scipy.interpolate import griddata
 import pickle
 
 # %% load freddis data
-path_freddi = "/work/bm1183/m301049/freddi_runs/"
-atms = xr.open_dataset(path_freddi + "atms_full.nc")
-fluxes_3d = xr.open_dataset(path_freddi + "fluxes_3d_full.nc")
-fluxes_2d = xr.open_dataset(path_freddi + "fluxes_2d.nc")
-aux = xr.open_dataset(path_freddi + "aux.nc")
+path = "/work/bm1183/m301049/icon_arts_processed/"
+run = "fullrange_flux_mid1deg/"
+atms = xr.open_dataset(path + run + "atms_full.nc")
+fluxes_3d = xr.open_dataset(path + run  + "fluxes_3d_full.nc")
+run = "fullrange_flux_mid1deg_noice/"
+fluxes_3d_noice = xr.open_dataset(path + run + "fluxes_3d_full.nc")
+lw_vars = xr.open_dataset("data/lw_vars.nc") 
 
-# %% find profiles with high clouds and no low clouds below
+
+# %% valid profiles without graupel and high enough clouds
+mask_valid = lw_vars["mask_valid"]
 mask_hc_no_lc = (atms["IWP"] > 1e-6) & (atms["LWP"] < 1e-10)
-mask_height = ~atms["h_cloud_top_pressure"].isnull()
-
 
 # %% calculate high cloud albedo
-atms["clearsky_albedo"] = np.abs(
-    fluxes_3d.isel(pressure=-1)["clearsky_sw_up"]
-    / fluxes_3d.isel(pressure=-1)["clearsky_sw_down"]
+atms["noice_albedo"] = np.abs(
+    fluxes_3d_noice.isel(pressure=-1)["allsky_sw_up"]
+    / fluxes_3d_noice.isel(pressure=-1)["allsky_sw_down"]
 )
 atms["allsky_albedo"] = np.abs(
     fluxes_3d.isel(pressure=-1)["allsky_sw_up"]
     / fluxes_3d.isel(pressure=-1)["allsky_sw_down"]
 )
-atms["high_cloud_albedo"] = (atms["allsky_albedo"] - atms["clearsky_albedo"]) / (
-    1 - atms["clearsky_albedo"]
+atms["high_cloud_albedo"] = (atms["allsky_albedo"] - atms["noice_albedo"]) / (
+    1 - atms["noice_albedo"]
 )
 
 # %% calculate mean albedos by weighting with the incoming SW radiation in IWP bins
@@ -46,7 +48,7 @@ for i in range(len(binned_hc_albedo) - 1):
         binned_hc_albedo[i, j] = float(
             (
                 atms["high_cloud_albedo"]
-                .where(IWP_mask & SW_mask & mask_hc_no_lc & mask_height)
+                .where(IWP_mask & SW_mask & mask_valid & mask_hc_no_lc)
                 .sel(lat=slice(-30, 30))
             )
             .mean()
@@ -92,7 +94,7 @@ for i in range(len(binned_hc_albedo) - 1):
         binned_clearsky_sw_up[i, j] = float(
             (
                 fluxes_toa["clearsky_sw_up"]
-                .where(IWP_mask & SW_mask & mask_hc_no_lc & mask_height)
+                .where(IWP_mask & SW_mask & mask_valid)
                 .sel(lat=slice(-30, 30))
             )
             .mean()
@@ -101,7 +103,7 @@ for i in range(len(binned_hc_albedo) - 1):
         binned_clearsky_sw_down[i, j] = float(
             (
                 fluxes_toa["clearsky_sw_down"]
-                .where(IWP_mask & SW_mask & mask_hc_no_lc & mask_height)
+                .where(IWP_mask & SW_mask & mask_valid)
                 .sel(lat=slice(-30, 30))
             )
             .mean()
@@ -110,7 +112,7 @@ for i in range(len(binned_hc_albedo) - 1):
         binned_allsky_sw_up[i, j] = float(
             (
                 fluxes_toa["allsky_sw_up"]
-                .where(IWP_mask & SW_mask & mask_hc_no_lc & mask_height)
+                .where(IWP_mask & SW_mask & mask_valid)
                 .sel(lat=slice(-30, 30))
             )
             .mean()
@@ -119,7 +121,7 @@ for i in range(len(binned_hc_albedo) - 1):
         binned_allsky_sw_down[i, j] = float(
             (
                 fluxes_toa["allsky_sw_down"]
-                .where(IWP_mask & SW_mask & mask_hc_no_lc & mask_height)
+                .where(IWP_mask & SW_mask & mask_valid)
                 .sel(lat=slice(-30, 30))
             )
             .mean()
@@ -174,10 +176,10 @@ hc_albedo_radsum_interpolated = hc_albedo(SW_fluxes_interpolated)
 fig, axes = plt.subplots(1, 2, figsize=(10, 6))
 
 pcol = axes[0].pcolormesh(
-    IWP_bins, SW_down_bins, binned_hc_albedo.T * -1, cmap="viridis"
+    IWP_bins, SW_down_bins, binned_hc_albedo.T , cmap="viridis"
 )
 axes[1].pcolormesh(
-    IWP_bins, SW_down_bins, binned_hc_albedo_interp.T * -1, cmap="viridis"
+    IWP_bins, SW_down_bins, binned_hc_albedo_interp.T , cmap="viridis"
 )
 
 axes[0].set_ylabel("SWin at TOA / W m$^{-2}$")
@@ -285,11 +287,11 @@ ax.spines["top"].set_visible(False)
 ax.spines["right"].set_visible(False)
 
 sc = ax.scatter(
-    atms["IWP"].where(mask_hc_no_lc & mask_height).sel(lat=slice(-30, 30)),
-    atms["high_cloud_albedo"].where(mask_hc_no_lc & mask_height).sel(lat=slice(-30, 30)),
+    atms["IWP"].where(mask_valid).sel(lat=slice(-30, 30)),
+    atms["high_cloud_albedo"].where(mask_valid).sel(lat=slice(-30, 30)),
     s=0.5,
     c=fluxes_3d.isel(pressure=-1)["allsky_sw_down"]
-    .where(mask_hc_no_lc)
+    .where(mask_valid)
     .sel(lat=slice(-30, 30)),
     cmap="viridis",
 )
