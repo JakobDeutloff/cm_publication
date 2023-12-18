@@ -3,11 +3,15 @@ import xarray as xr
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
+from src.plot_functions import plot_profiles_noice
+
 # %% load data
 path = "/work/bm1183/m301049/icon_arts_processed/"
 run = "fullrange_flux_mid1deg_noice/"
-fluxes_3d_noice = xr.open_dataset(path + run + "fluxes_3d.nc")
+fluxes_3d_noice = xr.open_dataset(path + run + "fluxes_3d_full.nc")
 atms = xr.open_dataset(path + run + "atms_full.nc")
+run = "fullrange_flux_mid1deg/"
+fluxes_3d = xr.open_dataset(path + run + "fluxes_3d_full.nc")
 cre_binned = xr.open_dataset("data/cre_binned.nc")
 cre_interpolated = xr.open_dataset("data/cre_interpolated.nc")
 lw_vars = xr.open_dataset("data/lw_vars.nc")
@@ -84,6 +88,7 @@ fig.colorbar(
     pad=0.2,
     extend="both",
 )
+fig.savefig("plots/cre_net_binned.png", dpi=300)
 
 # %% plot SW cre and selected bins
 fig, axes = plt.subplots(1, 2, figsize=(9, 5), sharey="row")
@@ -162,6 +167,38 @@ fig.colorbar(
     pad=0.2,
     extend="max",
 )
+
+# %% look at profiles in positive bins 
+
+# find lon and IWP coordinate of maximum sw cre
+max_idx = cre_binned["all_sw"].where(strange_mask).argmax(dim=["lon", "IWP"])
+IWP_max = 0.339 # cre_binned["all_sw"].IWP.isel(IWP=max_idx['IWP'].values)
+lon_max = -20 # cre_binned["all_sw"].lon.isel(lon=max_idx['lon'].values)
+
+# get respective bins
+dist = cre_binned.IWP_bins - IWP_max
+idx_low = dist.where(dist < 0).argmax(dim="IWP_bins")
+idx_high = dist.where(dist > 0).argmin(dim="IWP_bins")
+IWP_bin = [cre_binned.IWP_bins.isel(IWP_bins=idx_low), cre_binned.IWP_bins.isel(IWP_bins=idx_high)]
+
+dist = cre_binned.lon_bins - lon_max
+idx_low = dist.where(dist < 0).argmax(dim="lon_bins")
+idx_high = dist.where(dist > 0).argmin(dim="lon_bins")
+lon_bin = [cre_binned.lon_bins.isel(lon_bins=idx_low), cre_binned.lon_bins.isel(lon_bins=idx_high)]
+
+# get lat and lon coordinates of profiles in the bins
+IWP_mask = (atms.IWP > IWP_bin[0]) & (atms.IWP < IWP_bin[1])
+lon_mask = (atms.lon > lon_bin[0]) & (atms.lon < lon_bin[1])
+lons_3d, lats_3d = np.meshgrid(atms.lon, atms.lat)
+lons = lons_3d[mask_valid & IWP_mask & lon_mask]
+lats = lats_3d[mask_valid & IWP_mask & lon_mask]
+lats_tropic = (lats < 30) & (lats > -30)
+lats = lats[lats_tropic]
+lons = lons[lats_tropic]
+
+# plot profile 
+fig, axes = plot_profiles_noice(lat=lats[0], lon=lons[0], atms=atms, fluxes_3d=fluxes_3d, fluxes_3d_noice=fluxes_3d_noice)
+fig.savefig(f'plots/positive_sw_cre/profile_{IWP_max}_{lon_max}.png', dpi=300)
 
 # %% plot low cloud fraction as a function of IWP
 low_clouds = (atms["LWP"] > 1e-6).sel(lat=slice(-30, 30))
@@ -271,8 +308,7 @@ ax.set_title('')
 fig.tight_layout()
 fig.savefig("plots/albedo_troposphere.png", dpi=300)
 
-# plot LW up as a function of IWP
-
+#%% plot LW up as a function of IWP
 R_t_binned = fluxes_3d_noice.isel(pressure=-1)["allsky_lw_up"].sel(
     lat=slice(-30, 30)
 ).groupby_bins(atms["IWP"].sel(lat=slice(-30, 30)), IWP_bins).mean()
@@ -302,4 +338,3 @@ fig.tight_layout()
 fig.savefig("plots/R_troposphere.png", dpi=300)
 
 
-# %%

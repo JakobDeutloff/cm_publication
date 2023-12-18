@@ -29,7 +29,6 @@ IWP_bins = np.logspace(-5, 2, num=50)
 IWP_points = (IWP_bins[1:] + IWP_bins[:-1]) / 2
 lon_bins = np.linspace(-180, 180, num=36)
 lon_points = (lon_bins[1:] + lon_bins[:-1]) / 2
-
 cre_binned = {}
 cre_interpolated = {}
 cre_interpolated_average = {}
@@ -221,6 +220,7 @@ cre_binned_xr['ice_only_net'] = xr.DataArray(data=cre_binned['ice_only']['net'],
 cre_binned_xr['ice_over_lc_sw'] = xr.DataArray(data=cre_binned['ice_over_lc']['sw'], coords={'IWP': IWP_points, 'lon': lon_points})
 cre_binned_xr['ice_over_lc_lw'] = xr.DataArray(data=cre_binned['ice_over_lc']['lw'], coords={'IWP': IWP_points, 'lon': lon_points})
 cre_binned_xr['ice_over_lc_net'] = xr.DataArray(data=cre_binned['ice_over_lc']['net'], coords={'IWP': IWP_points, 'lon': lon_points})
+cre_binned_xr = cre_binned_xr.assign_coords({'IWP_bins': IWP_bins, 'lon_bins': lon_bins})
 
 cre_interpolated_xr = xr.Dataset()
 cre_interpolated_xr['all_sw'] = xr.DataArray(data=cre_interpolated['all']['sw'], coords={'IWP': IWP_points, 'lon': lon_points})
@@ -232,6 +232,7 @@ cre_interpolated_xr['ice_only_net'] = xr.DataArray(data=cre_interpolated['ice_on
 cre_interpolated_xr['ice_over_lc_sw'] = xr.DataArray(data=cre_interpolated['ice_over_lc']['sw'], coords={'IWP': IWP_points, 'lon': lon_points})
 cre_interpolated_xr['ice_over_lc_lw'] = xr.DataArray(data=cre_interpolated['ice_over_lc']['lw'], coords={'IWP': IWP_points, 'lon': lon_points})
 cre_interpolated_xr['ice_over_lc_net'] = xr.DataArray(data=cre_interpolated['ice_over_lc']['net'], coords={'IWP': IWP_points, 'lon': lon_points})
+cre_interpolated_xr = cre_interpolated_xr.assign_coords({'IWP_bins': IWP_bins, 'lon_bins': lon_bins})
 
 cre_interpolated_average_xr = xr.Dataset()
 cre_interpolated_average_xr['all_sw'] = xr.DataArray(data=cre_interpolated_average['all']['sw'], coords={'IWP': IWP_points})
@@ -243,6 +244,7 @@ cre_interpolated_average_xr['ice_only_net'] = xr.DataArray(data=cre_interpolated
 cre_interpolated_average_xr['ice_over_lc_sw'] = xr.DataArray(data=cre_interpolated_average['ice_over_lc']['sw'], coords={'IWP': IWP_points})
 cre_interpolated_average_xr['ice_over_lc_lw'] = xr.DataArray(data=cre_interpolated_average['ice_over_lc']['lw'], coords={'IWP': IWP_points})
 cre_interpolated_average_xr['ice_over_lc_net'] = xr.DataArray(data=cre_interpolated_average['ice_over_lc']['net'], coords={'IWP': IWP_points})
+cre_interpolated_average_xr = cre_interpolated_average_xr.assign_coords({'IWP_bins': IWP_bins})
 
 cre_xr.to_netcdf('data/cre.nc')
 cre_binned_xr.to_netcdf('data/cre_binned.nc')
