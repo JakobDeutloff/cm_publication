@@ -16,10 +16,6 @@ fluxes_3d_noice = xr.open_dataset(path + run + "fluxes_3d_full.nc")
 lw_vars = xr.open_dataset("data/lw_vars.nc") 
 
 
-# %% valid profiles without graupel and high enough clouds
-mask_valid = lw_vars["mask_valid"]
-mask_hc_no_lc = (atms["IWP"] > 1e-6) & (atms["LWP"] < 1e-10)
-
 # %% calculate high cloud albedo
 sw_vars = xr.Dataset()
 
@@ -40,18 +36,18 @@ sw_vars["high_cloud_albedo"] = calc_hc_albedo(sw_vars["noice_albedo"], sw_vars["
 IWP_bins = np.logspace(-5, 1, num=50)
 IWP_points = (IWP_bins[1:] + IWP_bins[:-1]) / 2
 SW_down_bins = np.linspace(0, 1360, 30)
-binned_hc_albedo = np.zeros([len(IWP_bins) - 1, len(SW_down_bins) - 1])
+binned_hc_albedo = np.zeros([len(IWP_bins) - 1, len(SW_down_bins) - 1]) * np.nan
 
-for i in range(len(binned_hc_albedo) - 1):
-    IWP_mask = (atms["IWP"] > IWP_bins[i]) & (atms["IWP"] < IWP_bins[i + 1])
+for i in range(len(IWP_bins) - 1):
+    IWP_mask = (atms["IWP"] > IWP_bins[i]) & (atms["IWP"] <= IWP_bins[i + 1])
     for j in range(len(SW_down_bins) - 1):
         SW_mask = (fluxes_3d["allsky_sw_down"].isel(pressure=-1) > SW_down_bins[j]) & (
-            fluxes_3d["allsky_sw_down"].isel(pressure=-1) < SW_down_bins[j + 1]
+            fluxes_3d["allsky_sw_down"].isel(pressure=-1) <= SW_down_bins[j + 1]
         )
         binned_hc_albedo[i, j] = float(
             (
                 sw_vars["high_cloud_albedo"]
-                .where(IWP_mask & SW_mask & mask_valid & mask_hc_no_lc)
+                .where(IWP_mask & SW_mask & lw_vars['mask_height'] & lw_vars['mask_hc_no_lc'])
                 .sel(lat=slice(-30, 30))
             )
             .mean()
@@ -69,16 +65,18 @@ binned_hc_albedo_interp = binned_hc_albedo.copy()
 binned_hc_albedo_interp[np.isnan(binned_hc_albedo)] = interpolated_values
 
 # %% average over SW albedo bins
-mean_hc_albedo_SW = np.zeros(len(IWP_bins) - 1)
-mean_hc_albedo_SW_interp = np.zeros(len(IWP_bins) - 1)
+mean_hc_albedo_SW = np.zeros(len(IWP_points))
+mean_hc_albedo_SW_interp = np.zeros(len(IWP_points))
+SW_down = (SW_down_bins[1:] + SW_down_bins[:-1]) / 2  # center of SW bins
 for i in range(len(IWP_bins) - 1):
     nan_mask = ~np.isnan(binned_hc_albedo[i, :])
     mean_hc_albedo_SW[i] = np.sum(
-        binned_hc_albedo[i, :][nan_mask] * SW_down_bins[:-1][nan_mask]
-    ) / np.sum(SW_down_bins[:-1][nan_mask])
+        binned_hc_albedo[i, :][nan_mask] * SW_down[nan_mask]
+    ) / np.sum(SW_down[nan_mask])
+    nan_mask_interp = ~np.isnan(binned_hc_albedo_interp[i, :])
     mean_hc_albedo_SW_interp[i] = np.sum(
-        binned_hc_albedo_interp[i, :] * SW_down_bins[:-1]
-    ) / np.sum(SW_down_bins[:-1])
+        binned_hc_albedo_interp[i, :][nan_mask_interp] * SW_down[nan_mask_interp]
+    ) / np.sum(SW_down[nan_mask_interp])
 
 
 # %% plot albedo in SW bins
@@ -111,11 +109,11 @@ ax.spines["top"].set_visible(False)
 ax.spines["right"].set_visible(False)
 
 sc = ax.scatter(
-    atms["IWP"].where(mask_valid & mask_hc_no_lc).sel(lat=slice(-30, 30)),
-    sw_vars["high_cloud_albedo"].where(mask_valid & mask_hc_no_lc).sel(lat=slice(-30, 30)),
+    atms["IWP"].where(lw_vars["mask_height"] & lw_vars["mask_hc_no_lc"]).sel(lat=slice(-30, 30)),
+    sw_vars["high_cloud_albedo"].where(lw_vars["mask_height"] & lw_vars["mask_hc_no_lc"]).sel(lat=slice(-30, 30)),
     s=0.5,
     c=fluxes_3d.isel(pressure=-1)["allsky_sw_down"]
-    .where(mask_valid)
+    .where(lw_vars["mask_height"] & lw_vars["mask_hc_no_lc"])
     .sel(lat=slice(-30, 30)),
     cmap="viridis",
 )
@@ -132,7 +130,7 @@ ax.set_xlim([1e-5, 1e1])
 ax.set_ylim([0, 1])
 ax.legend()
 fig.tight_layout()
-fig.savefig("figures/albedo.png", dpi=300)
+fig.savefig("plots/albedo.png", dpi=300)
 
 # %% save coefficients as pkl file
 with open("data/fitted_albedo.pkl", "wb") as f:

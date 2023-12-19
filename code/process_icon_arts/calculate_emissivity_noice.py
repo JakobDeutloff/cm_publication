@@ -13,12 +13,6 @@ run = "fullrange_flux_mid1deg_noice/"
 fluxes_3d_noice = xr.open_dataset(path + run + "fluxes_3d_full.nc")
 atms = xr.open_dataset(path + run + "atms_full.nc")
 
-# %% find profiles with high clouds and no low clouds below and above 8 km
-idx_height = (atms["IWC"] + atms['snow'] + atms['graupel']).argmax("pressure")
-mask_graupel = atms.isel(pressure=idx_height)["pressure"] < 35000
-mask_iwc = atms["IWC"].max('pressure') > 1e-12
-mask_valid = mask_graupel & mask_iwc
-
 # %% initialize dataset for new variables
 lw_vars = xr.Dataset()
 
@@ -34,8 +28,11 @@ T_h_lw = atms["temperature"].sel(pressure=p_top)
 lw_vars["h_cloud_temperature"] = T_h_lw
 lw_vars["h_cloud_top_pressure"] = p_top
 
+# %% find profiles with high clouds and no thick graupel layers below above 350 hPa
+mask_hc_no_lc = (atms["IWP"] > 1e-7) & (atms["LWP"] < 1e-7)
 mask_height = p_top < 35000
-mask_valid = mask_valid & mask_height
+lw_vars["mask_height"] = mask_height
+lw_vars["mask_hc_no_lc"] = mask_hc_no_lc
 
 # %% calculate high cloud emissivity
 sigma = 5.67e-8  # W m-2 K-4
@@ -51,7 +48,7 @@ rad_hc = -lw_vars["h_cloud_temperature"] ** 4 * sigma
 hc_emissivity = (LW_out_as - LW_out_cs) / (rad_hc - LW_out_cs)
 lw_vars["high_cloud_emissivity"] = hc_emissivity
 lw_vars["rad_correction"] = correction
-lw_vars["mask_valid"] = mask_valid
+
 
 # %% aveage over IWP bins
 IWP_bins = np.logspace(-5, 1, num=50)
@@ -63,13 +60,13 @@ for i in range(len(IWP_bins) - 1):
     IWP_mask = (atms["IWP"] > IWP_bins[i]) & (atms["IWP"] < IWP_bins[i + 1])
     mean_hc_emissivity[i] = float(
         lw_vars["high_cloud_emissivity"]
-        .where(IWP_mask & mask_valid)
+        .where(IWP_mask & mask_height & mask_hc_no_lc)
         .sel(lat=slice(-30, 30))
         .mean()
         .values
     )
     mean_correction_factor[i] = float(
-        lw_vars["rad_correction"].where(IWP_mask & mask_valid).sel(lat=slice(-30, 30)).mean().values
+        lw_vars["rad_correction"].where(IWP_mask & mask_height & mask_hc_no_lc).sel(lat=slice(-30, 30)).mean().values
     )
 
 # %% fit polynomial to mean emissivity
@@ -106,14 +103,14 @@ ax.spines["top"].set_visible(False)
 ax.spines["right"].set_visible(False)
 
 sc = ax.scatter(
-    atms["IWP"].where(mask_valid).sel(lat=slice(-30, 30)),
+    atms["IWP"].where(mask_height).sel(lat=slice(-30, 30)),
     lw_vars["high_cloud_emissivity"]
-    .where(mask_valid)
+    .where(mask_height)
     .sel(lat=slice(-30, 30)),
     s=0.5,
     c=fluxes_3d["allsky_sw_down"]
     .isel(pressure=-1)
-    .where(mask_valid)
+    .where(mask_height & mask_hc_no_lc)
     .sel(lat=slice(-30, 30)),
     cmap="viridis",
 )
@@ -140,8 +137,8 @@ ax.spines["top"].set_visible(False)
 ax.spines["right"].set_visible(False)
 
 sc = ax.scatter(
-    atms["IWP"].where(mask_valid).sel(lat=slice(-30, 30)),
-    lw_vars["rad_correction"].where(mask_valid).sel(lat=slice(-30, 30)),
+    atms["IWP"].where(mask_height).sel(lat=slice(-30, 30)),
+    lw_vars["rad_correction"].where(mask_height).sel(lat=slice(-30, 30)),
     s=0.5,
     color="k",
 )
@@ -172,5 +169,3 @@ with open("data/fitted_correction_factor.pkl", "wb") as f:
 
 # save lw_vars as netcdf
 lw_vars.to_netcdf("data/lw_vars.nc")
-
-# %%

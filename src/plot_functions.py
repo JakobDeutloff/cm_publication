@@ -235,4 +235,48 @@ def plot_profiles_noice(lat, lon, atms, fluxes_3d, fluxes_3d_noice):
     )
     fig.tight_layout()
 
-    return fig, axes 
+    return fig, axes
+
+
+def scatterplot(
+    x_data,
+    y_data,
+    color_data,
+    xlabel='IWP / kg m$^{-2}$',
+    ylabel='',
+    title=None,
+    xlim=None,
+    ylim=None,
+    logx=True,
+    logy=False,
+    logc=False,
+    cbar_label=None,
+):
+    fig, ax = plt.subplots(1, 1, figsize=(6, 4))
+    c = ax.scatter(
+        x_data,
+        y_data,
+        marker="o",
+        s=0.2,
+        c=color_data,
+        cmap="viridis",
+    )
+    fig.colorbar(c, ax=ax, label=cbar_label)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if logx:
+        ax.set_xscale("log")
+    if logy:
+        ax.set_yscale("log")
+    if xlim is not None:
+        ax.set_xlim(xlim)
+    if ylim is not None:
+        ax.set_ylim(ylim)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    if title is not None:
+        ax.set_title(title)
+    fig.tight_layout()
+    return fig, ax
+
+
