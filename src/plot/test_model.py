@@ -93,15 +93,6 @@ alpha_s = (
     .values
 )
 
-# %% calculate mean surface temperature below clouds
-T_s = (
-    aux["surface temperature"]
-    .where(mask_hc_no_lc & mask_height)
-    .sel(lat=slice(-30, 30))
-    .mean()
-    .values
-)
-
 # %% calculate mean SW in
 SW_in = (
     fluxes_3d["clearsky_sw_down"]

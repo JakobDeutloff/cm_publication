@@ -4,16 +4,11 @@ import xarray as xr
 import matplotlib.pyplot as plt
 import pickle
 from src.icon_arts_analysis import calc_cre, bin_and_average_cre
+from src.read_data import load_atms_and_fluxes, load_derived_vars
 
-# %% load freddis data
-path = "/work/bm1183/m301049/icon_arts_processed/"
-run = "fullrange_flux_mid1deg/"
-atms = xr.open_dataset(path + run + "atms_full.nc")
-fluxes_3d = xr.open_dataset(path + run + "fluxes_3d_full.nc")
-# noice fluxes
-run = "fullrange_flux_mid1deg_noice/"
-fluxes_3d_noice = xr.open_dataset(path + run + "fluxes_3d_full.nc")
-lw_vars = xr.open_dataset("data/lw_vars.nc")
+# %% load  data
+atms, fluxes_3d, fluxes_3d_noice = load_atms_and_fluxes()
+lw_vars, sw_vars, lc_vars = load_derived_vars()
 
 # %% calculate cre
 fluxes_toa = fluxes_3d.isel(pressure=-1)
@@ -35,7 +30,7 @@ cre_interpolated_average = {}
 
 # %% all clouds
 cre_binned["all"], cre_interpolated["all"], cre_interpolated_average["all"] = bin_and_average_cre(
-    cre_noice.where(lw_vars['mask_valid']).sel(lat=slice(-30, 30)),
+    cre_noice.where(lw_vars['mask_height']).sel(lat=slice(-30, 30)),
     IWP_bins,
     lon_bins,
     atms,
@@ -43,7 +38,7 @@ cre_binned["all"], cre_interpolated["all"], cre_interpolated_average["all"] = bi
 )
 # %% high cloud with no low coud below
 cre_binned["ice_only"], cre_interpolated["ice_only"], cre_interpolated_average["ice_only"] = bin_and_average_cre(
-    cre_noice.where(lw_vars['mask_valid']).sel(lat=slice(-30, 30)),
+    cre_noice.where(lw_vars['mask_height']).sel(lat=slice(-30, 30)),
     IWP_bins,
     lon_bins,
     atms,
@@ -51,7 +46,7 @@ cre_binned["ice_only"], cre_interpolated["ice_only"], cre_interpolated_average["
 )
 # %% high cloud over low cloud
 cre_binned["ice_over_lc"], cre_interpolated["ice_over_lc"], cre_interpolated_average["ice_over_lc"] = bin_and_average_cre(
-    cre_noice.where(lw_vars['mask_valid']).sel(lat=slice(-30, 30)),
+    cre_noice.where(lw_vars['mask_height']).sel(lat=slice(-30, 30)),
     IWP_bins,
     lon_bins,
     atms,
@@ -246,10 +241,11 @@ cre_interpolated_average_xr['ice_over_lc_lw'] = xr.DataArray(data=cre_interpolat
 cre_interpolated_average_xr['ice_over_lc_net'] = xr.DataArray(data=cre_interpolated_average['ice_over_lc']['net'], coords={'IWP': IWP_points})
 cre_interpolated_average_xr = cre_interpolated_average_xr.assign_coords({'IWP_bins': IWP_bins})
 
-cre_xr.to_netcdf('data/cre.nc')
-cre_binned_xr.to_netcdf('data/cre_binned.nc')
-cre_interpolated_xr.to_netcdf('data/cre_interpolated.nc')
-cre_interpolated_average_xr.to_netcdf('data/cre_interpolated_average.nc')
+path = "/work/bm1183/m301049/icon_arts_processed/derived_quantities/"
+cre_xr.to_netcdf(path + 'cre.nc')
+cre_binned_xr.to_netcdf(path + 'cre_binned.nc')
+cre_interpolated_xr.to_netcdf(path + 'cre_interpolated.nc')
+cre_interpolated_average_xr.to_netcdf(path + 'cre_interpolated_average.nc')
 
 
 

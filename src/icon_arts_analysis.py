@@ -120,3 +120,6 @@ def bin_and_average_cre(cre, IWP_bins, lon_bins, atms, modus="ice_only"):
         interp_cre_average[key] = np.nanmean(interp_cre[key], axis=1)
 
     return cre_arr, interp_cre, interp_cre_average
+
+def cut_data(data, mask=True):
+    return data.sel(lat=slice(-30, 30)).where(mask)

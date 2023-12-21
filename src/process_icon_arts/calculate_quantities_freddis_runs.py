@@ -6,7 +6,7 @@ import cartopy.crs as ccrs
 
 # %% load data from freddis runs
 path_freddi = "/work/bm1183/m301049/icon_arts_processed/"
-run = "fullrange_flux_mid1deg_noice/"
+run = "fullrange_flux_mid1deg/"
 atms = xr.open_dataset(path_freddi + run + "atms.nc")
 fluxes_3d = xr.open_dataset(path_freddi + run + "fluxes_3d.nc")
 aux = xr.open_dataset(path_freddi + run + "aux.nc")
@@ -26,12 +26,20 @@ for flux in fluxes:
     fluxes_3d[flux] = fluxes_3d[flux] * -1
 
 # %% calculate IWP and LWP
-cell_height = atms["geometric height"].diff("pressure")  # not correct, we would need height ad half levels
-atms["IWP"] = ((atms["IWC"] + atms["snow"] + atms["graupel"]) * cell_height).sum("pressure")
-atms['IWC_cumsum'] = (atms["IWC"] * cell_height).cumsum('pressure')
-atms['IWC_cumsum'] = atms['IWC_cumsum'].where(~atms['IWC_cumsum'].isnull(), 0)
-atms['IWC_cumsum'] = -1 * (atms['IWC_cumsum'] - atms['IWC_cumsum'].isel(pressure=-1))
+cell_height = atms["geometric height"].diff(
+    "pressure"
+)  # not correct, we would need height ad half levels
+atms["IWP"] = ((atms["IWC"] + atms["snow"] + atms["graupel"]) * cell_height).sum(
+    "pressure"
+)
+atms["IWC_cumsum"] = (atms["IWC"] * cell_height).cumsum("pressure")
+atms["IWC_cumsum"] = atms["IWC_cumsum"].where(~atms["IWC_cumsum"].isnull(), 0)
+atms["IWC_cumsum"] = -1 * (atms["IWC_cumsum"] - atms["IWC_cumsum"].isel(pressure=-1))
 atms["LWP"] = ((atms["rain"] + atms["LWC"]) * cell_height).sum("pressure")
+
+# %% calculate lc fraction
+lc_fraction = (atms["LWP"] > 1e-6) * 1
+atms["lc_fraction"] = lc_fraction
 
 # %% calculate heating rates from fluxes (vertical levels are not quite correct)
 g = 9.81
@@ -89,6 +97,15 @@ clearsky_hr_sw["pressure"] = p_half
 clearsky_hr_sw = clearsky_hr_sw.rename({"pressure": "p_half"})
 fluxes_3d["clearsky_hr_sw"] = clearsky_hr_sw
 
+# %% calculate albedo
+fluxes_3d["albedo_allsky"] = np.abs(
+    fluxes_3d["allsky_sw_up"].isel(pressure=-1)
+    / fluxes_3d["allsky_sw_down"].isel(pressure=-1)
+)
+fluxes_3d["albedo_clearsky"] = np.abs(
+    fluxes_3d["clearsky_sw_up"].isel(pressure=-1)
+    / fluxes_3d["clearsky_sw_down"].isel(pressure=-1)
+)
 
 # %% save results
 atms.to_netcdf(path_freddi + run + "atms_full.nc")

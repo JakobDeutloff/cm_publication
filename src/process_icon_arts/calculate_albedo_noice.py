@@ -10,7 +10,8 @@ from src.plot_functions import scatterplot
 from scipy.optimize import curve_fit
 
 # %% load  data
-atms, fluxes_3d, fluxes_3d_noice, lw_vars = load_atms_and_fluxes()
+atms, fluxes_3d, fluxes_3d_noice = load_atms_and_fluxes()
+lw_vars = xr.open_dataset("/work/bm1183/m301049/icon_arts_processed/derived_quantities/lw_vars.nc")
 
 
 # %% calculate high cloud albedo
@@ -96,6 +97,7 @@ for i in range(len(IWP_bins) - 1):
 
 
 mean_sw_vars.index = IWP_points
+mean_sw_vars.index.name = "IWP"
 mean_sw_vars["binned_albedo"] = mean_hc_albedo_SW
 mean_sw_vars["interpolated_albedo"] = mean_hc_albedo_SW_interp
 
@@ -133,6 +135,7 @@ ax.plot(mean_sw_vars['interpolated_albedo'], label="Mean Albedo", color="k")
 ax.plot(IWP_points, logistic_curve, label="Fitted Polynomial", color="red", linestyle='--')
 
 fig.savefig("plots/albedo.png", dpi=300)
+plt.show()
 
 # %% save coefficients as pkl file
 path = '/work/bm1183/m301049/icon_arts_processed/derived_quantities/'

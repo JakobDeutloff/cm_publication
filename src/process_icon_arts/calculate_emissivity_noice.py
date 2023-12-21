@@ -58,6 +58,8 @@ mean_hc_emissivity = (
     .mean()
 )
 
+mean_lw_vars.index = IWP_points
+mean_lw_vars.index.name = "IWP"
 mean_lw_vars["binned_emissivity"] = mean_hc_emissivity
 
 

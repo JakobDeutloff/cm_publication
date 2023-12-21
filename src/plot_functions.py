@@ -241,7 +241,7 @@ def plot_profiles_noice(lat, lon, atms, fluxes_3d, fluxes_3d_noice):
 def scatterplot(
     x_data,
     y_data,
-    color_data,
+    color_data=None,
     xlabel='IWP / kg m$^{-2}$',
     ylabel='',
     title=None,
@@ -253,17 +253,23 @@ def scatterplot(
     cbar_label=None,
 ):
     fig, ax = plt.subplots(1, 1, figsize=(6, 4))
-    c = ax.scatter(
-        x_data,
-        y_data,
-        marker="o",
-        s=0.2,
-        c=color_data,
-        cmap="viridis",
-    )
-    fig.colorbar(c, ax=ax, label=cbar_label)
+
+    if color_data is not None:
+        c = ax.scatter(
+            x_data,
+            y_data,
+            marker="o",
+            s=0.2,
+            c=color_data,
+            cmap="viridis",
+        )
+        fig.colorbar(c, ax=ax, label=cbar_label)
+    else:
+        ax.scatter(x_data, y_data, marker="o", s=0.2)
+
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
+
     if logx:
         ax.set_xscale("log")
     if logy:
