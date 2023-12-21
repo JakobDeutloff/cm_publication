@@ -2,22 +2,20 @@
 import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
-import cartopy.crs as ccrs
-from scipy.interpolate import griddata
+import pandas as pd
 import pickle
+from scipy.interpolate import griddata
+from src.read_data import load_atms_and_fluxes
+from src.plot_functions import scatterplot
+from scipy.optimize import curve_fit
 
-# %% load freddis data
-path = "/work/bm1183/m301049/icon_arts_processed/"
-run = "fullrange_flux_mid1deg/"
-atms = xr.open_dataset(path + run + "atms_full.nc")
-fluxes_3d = xr.open_dataset(path + run  + "fluxes_3d_full.nc")
-run = "fullrange_flux_mid1deg_noice/"
-fluxes_3d_noice = xr.open_dataset(path + run + "fluxes_3d_full.nc")
-lw_vars = xr.open_dataset("data/lw_vars.nc") 
+# %% load  data
+atms, fluxes_3d, fluxes_3d_noice, lw_vars = load_atms_and_fluxes()
 
 
 # %% calculate high cloud albedo
 sw_vars = xr.Dataset()
+mean_sw_vars = pd.DataFrame()
 
 def calc_hc_albedo(a_cs, a_as):
     return (a_as - a_cs) / (a_cs * (a_as-2) + 1)
@@ -64,21 +62,6 @@ interpolated_values = griddata(
 binned_hc_albedo_interp = binned_hc_albedo.copy()
 binned_hc_albedo_interp[np.isnan(binned_hc_albedo)] = interpolated_values
 
-# %% average over SW albedo bins
-mean_hc_albedo_SW = np.zeros(len(IWP_points))
-mean_hc_albedo_SW_interp = np.zeros(len(IWP_points))
-SW_down = (SW_down_bins[1:] + SW_down_bins[:-1]) / 2  # center of SW bins
-for i in range(len(IWP_bins) - 1):
-    nan_mask = ~np.isnan(binned_hc_albedo[i, :])
-    mean_hc_albedo_SW[i] = np.sum(
-        binned_hc_albedo[i, :][nan_mask] * SW_down[nan_mask]
-    ) / np.sum(SW_down[nan_mask])
-    nan_mask_interp = ~np.isnan(binned_hc_albedo_interp[i, :])
-    mean_hc_albedo_SW_interp[i] = np.sum(
-        binned_hc_albedo_interp[i, :][nan_mask_interp] * SW_down[nan_mask_interp]
-    ) / np.sum(SW_down[nan_mask_interp])
-
-
 # %% plot albedo in SW bins
 fig, axes = plt.subplots(1, 2, figsize=(10, 6))
 
@@ -97,45 +80,68 @@ for ax in axes:
 
 fig.colorbar(pcol, label="High Cloud Albedo", location="bottom", ax=axes[:], shrink=0.8)
 
-# %% fit polynom to weighted and interpolated albedo
-iwp_mask = IWP_points <=1
-p = np.polyfit(np.log10(IWP_points[iwp_mask]), mean_hc_albedo_SW_interp[iwp_mask], 5)
-poly = np.poly1d(p)
-fitted_curve = poly(np.log10(IWP_points[iwp_mask]))
+# %% average over SW albedo bins
+mean_hc_albedo_SW = np.zeros(len(IWP_points))
+mean_hc_albedo_SW_interp = np.zeros(len(IWP_points))
+SW_down = (SW_down_bins[1:] + SW_down_bins[:-1]) / 2  # center of SW bins
+for i in range(len(IWP_bins) - 1):
+    nan_mask = ~np.isnan(binned_hc_albedo[i, :])
+    mean_hc_albedo_SW[i] = np.sum(
+        binned_hc_albedo[i, :][nan_mask] * SW_down[nan_mask]
+    ) / np.sum(SW_down[nan_mask])
+    nan_mask_interp = ~np.isnan(binned_hc_albedo_interp[i, :])
+    mean_hc_albedo_SW_interp[i] = np.sum(
+        binned_hc_albedo_interp[i, :][nan_mask_interp] * SW_down[nan_mask_interp]
+    ) / np.sum(SW_down[nan_mask_interp])
+
+
+mean_sw_vars.index = IWP_points
+mean_sw_vars["binned_albedo"] = mean_hc_albedo_SW
+mean_sw_vars["interpolated_albedo"] = mean_hc_albedo_SW_interp
+
+# %% fit logistic function to mean albedo
+def logistic(x, L, x0, k):
+    return L / (1 + np.exp(-k*(x-x0)))
+
+x = np.log10(IWP_points)
+y = mean_sw_vars['interpolated_albedo']
+nan_mask = ~np.isnan(y)
+x = x[nan_mask]
+y = y[nan_mask]
+
+popt, pcov = curve_fit(logistic, x, y)
+logistic_curve = logistic(np.log10(IWP_points), *popt)
 
 # %% plot fitted albedo in scatterplot with IWP
-fig, ax = plt.subplots(figsize=(7, 5))
-ax.spines["top"].set_visible(False)
-ax.spines["right"].set_visible(False)
 
-sc = ax.scatter(
-    atms["IWP"].where(lw_vars["mask_height"] & lw_vars["mask_hc_no_lc"]).sel(lat=slice(-30, 30)),
-    sw_vars["high_cloud_albedo"].where(lw_vars["mask_height"] & lw_vars["mask_hc_no_lc"]).sel(lat=slice(-30, 30)),
-    s=0.5,
-    c=fluxes_3d.isel(pressure=-1)["allsky_sw_down"]
-    .where(lw_vars["mask_height"] & lw_vars["mask_hc_no_lc"])
-    .sel(lat=slice(-30, 30)),
-    cmap="viridis",
+def cut_data(data, mask):
+    return data.where(mask).sel(lat=slice(-30, 30))
+
+fig, ax = scatterplot(
+    cut_data(atms["IWP"], lw_vars["mask_height"] & lw_vars["mask_hc_no_lc"]),
+    cut_data(sw_vars["high_cloud_albedo"], lw_vars["mask_height"] & lw_vars["mask_hc_no_lc"]),
+    cut_data(fluxes_3d["allsky_sw_down"].isel(pressure=-1), lw_vars["mask_height"] & lw_vars["mask_hc_no_lc"]),
+    "IWP / kg m$^{-2}$",
+    "High Cloud Albedo",
+    cbar_label="SWin at TOA / W m$^{-2}$",
+    xlim=[1e-5, 1e1],
+    ylim=[0, 1],
 )
 
-ax.plot(IWP_points[iwp_mask], mean_hc_albedo_SW_interp[iwp_mask], label="Mean Albedo", color="k")
-ax.plot(IWP_points[iwp_mask], fitted_curve, label="Fitted Polynomial", color="red", linestyle='--')
 
-cb = fig.colorbar(sc)
-cb.set_label("SWin at TOA / W m$^{-2}$")
-ax.set_xlabel("IWP / kg m$^{-2}$")
-ax.set_ylabel("High Cloud Albedo")
-ax.set_xscale("log")
-ax.set_xlim([1e-5, 1e1])
-ax.set_ylim([0, 1])
-ax.legend()
-fig.tight_layout()
+ax.plot(mean_sw_vars['interpolated_albedo'], label="Mean Albedo", color="k")
+ax.plot(IWP_points, logistic_curve, label="Fitted Polynomial", color="red", linestyle='--')
+
 fig.savefig("plots/albedo.png", dpi=300)
 
 # %% save coefficients as pkl file
-with open("data/fitted_albedo.pkl", "wb") as f:
-    pickle.dump(p, f)
+path = '/work/bm1183/m301049/icon_arts_processed/derived_quantities/'
+sw_vars.to_netcdf(path + "sw_vars.nc")
 
-sw_vars.to_netcdf("data/sw_vars.nc")
+with open(path + "hc_albedo_params.pkl", "wb") as f:
+    pickle.dump(popt, f)
+
+with open(path + 'mean_sw_vars.pkl', 'wb') as f:
+    pickle.dump(mean_sw_vars, f)    
 
 # %%

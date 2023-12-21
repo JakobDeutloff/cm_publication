@@ -14,8 +14,6 @@ def load_atms_and_fluxes():
         Fluxes.
     fluxes_3d_noice : xarray.Dataset
         Fluxes without ice.
-    lw_vars : xarray.Dataset
-        Longwave variables derived.   
     """
 
     path = "/work/bm1183/m301049/icon_arts_processed/"
@@ -24,14 +22,14 @@ def load_atms_and_fluxes():
     atms = xr.open_dataset(path + run + "atms_full.nc")
     run = "fullrange_flux_mid1deg/"
     fluxes_3d = xr.open_dataset(path + run + "fluxes_3d_full.nc")
-    lw_vars = xr.open_dataset("data/lw_vars.nc")
 
-    return atms, fluxes_3d, fluxes_3d_noice, lw_vars
+    return atms, fluxes_3d, fluxes_3d_noice
 
 def load_cre():
-    cre_binned = xr.open_dataset("data/cre_binned.nc")
-    cre_interpolated = xr.open_dataset("data/cre_interpolated.nc")
-    cre_average = xr.open_dataset("data/cre_interpolated_average.nc")
+    path = '/work/bm1183/m301049/icon_arts_processed/derived_quantities/'
+    cre_binned = xr.open_dataset(path + "cre_binned.nc")
+    cre_interpolated = xr.open_dataset(path + "cre_interpolated.nc")
+    cre_average = xr.open_dataset(path + "cre_interpolated_average.nc")
     return cre_binned, cre_interpolated, cre_average
 
 

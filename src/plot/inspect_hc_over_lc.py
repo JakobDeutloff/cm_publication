@@ -4,17 +4,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 from src.plot_functions import plot_profiles_noice
+from src.read_data import load_atms_and_fluxes, load_cre
 
 # %% load data
-path = "/work/bm1183/m301049/icon_arts_processed/"
-run = "fullrange_flux_mid1deg_noice/"
-fluxes_3d_noice = xr.open_dataset(path + run + "fluxes_3d_full.nc")
-atms = xr.open_dataset(path + run + "atms_full.nc")
-run = "fullrange_flux_mid1deg/"
-fluxes_3d = xr.open_dataset(path + run + "fluxes_3d_full.nc")
-cre_binned = xr.open_dataset("data/cre_binned.nc")
-cre_interpolated = xr.open_dataset("data/cre_interpolated.nc")
-lw_vars = xr.open_dataset("data/lw_vars.nc")
+atms, fluxes_3d, fluxes_3d_noice = load_atms_and_fluxes()
+cre_binned, cre_interpolated, cre_average = load_cre()
+lw_vars = xr.open_dataset("/work/bm1183/m301049/icon_arts_processed/derived_quantities/lw_vars.nc")
 
 # %% fractions of gridcells I use
 mask_height = lw_vars["mask_height"]
@@ -276,7 +271,7 @@ ax.spines["top"].set_visible(False)
 ax.spines["right"].set_visible(False)
 fig.savefig("plots/low_cloud_albedo_lwp.png", dpi=300)
 
-# %% plot troposphere albedo vs IWP 
+# %% plot troposphere albedo vs LWP
 albedo_t = np.abs(
     fluxes_3d_noice.isel(pressure=-1)["allsky_sw_up"]
     / fluxes_3d_noice.isel(pressure=-1)["allsky_sw_down"]
@@ -289,7 +284,7 @@ albedo_t_binned = albedo_t.sel(lat=slice(-30, 30)).groupby_bins(
 
 fig, ax = plt.subplots(1, 1, figsize=(6, 4))
 c = ax.scatter(
-    atms["IWP"]
+    atms["LWP"]
     .sel(lat=slice(-30, 30)),
     albedo_t.sel(lat=slice(-30, 30)),
     marker="o",
