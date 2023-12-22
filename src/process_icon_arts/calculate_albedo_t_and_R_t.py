@@ -158,6 +158,8 @@ ax.axhline(mean_clearsky_albedo, color="k", linestyle="-")
 ax.plot(mean_lc_vars["interpolated_albedo"], color="k", linestyle="-")
 ax.plot(LWP_points, logistic_curve, color="r", linestyle="--")
 
+# TODO: calculate constant albedo for LWP > 1e-6 and use it in model instead of logistic function. Make sure to weight in the correct way.  
+
 # %% plot clearsky albedo 
 
 fig, ax = scatterplot(

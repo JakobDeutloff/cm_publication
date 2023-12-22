@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+from src.icon_arts_analysis import cut_data
 
 
 def plot_profiles(lat, lon, atms, fluxes_3d):
@@ -242,8 +243,8 @@ def scatterplot(
     x_data,
     y_data,
     color_data=None,
-    xlabel='IWP / kg m$^{-2}$',
-    ylabel='',
+    xlabel="IWP / kg m$^{-2}$",
+    ylabel="",
     title=None,
     xlim=None,
     ylim=None,
@@ -286,3 +287,118 @@ def scatterplot(
     return fig, ax
 
 
+def plot_model_output(
+    result,
+    IWP_bins,
+    mask,
+    atms,
+    fluxes_3d_noice,
+    lw_vars,
+    lw_vars_avg,
+    sw_vars,
+    sw_vars_avg,
+    lc_vars,
+    cre_average,
+):
+    fig, axes = plt.subplots(4, 2, figsize=(10, 10), sharex="col")
+
+    axes[0, 0].scatter(
+        cut_data(atms["IWP"], mask),
+        cut_data(lw_vars["h_cloud_temperature"], mask),
+        s=0.1,
+        color="k",
+    )
+    axes[0, 0].plot(result["T_hc"], color="magenta")
+    axes[0, 0].set_ylabel(r"$\mathrm{T_{hc}}$ / K")
+
+    axes[0, 1].scatter(
+        cut_data(atms["IWP"], mask), cut_data(atms["LWP"], mask), s=0.1, color="k"
+    )
+    axes[0, 1].plot(result["LWP"], color="magenta")
+    axes[0, 1].set_ylim(1e-5, 1e1)
+    axes[0, 1].set_yscale("log")
+    axes[0, 1].set_ylabel(r"$\mathrm{LWP ~/~ kg ~m^{-2}}$")
+
+    axes[1, 0].plot(result["lc_fraction"], color="magenta")
+    axes[1, 0].set_ylabel("lc_fraction")
+
+    axes[1, 1].scatter(
+        cut_data(atms["IWP"], mask),
+        cut_data(fluxes_3d_noice["albedo_allsky"], mask),
+        s=0.1,
+        color="k",
+    )
+    cut_data(fluxes_3d_noice["albedo_allsky"], mask).groupby_bins(
+        cut_data(atms["IWP"], mask), bins=IWP_bins
+    ).mean().plot(ax=axes[1, 1], color="lime", label="Average")
+    axes[1, 1].plot(result["alpha_t"], color="magenta", label="Model")
+    axes[1, 1].set_ylabel("alpha_t")
+
+    axes[2, 0].scatter(
+        cut_data(atms["IWP"], mask), cut_data(lc_vars["R_t"], mask), s=0.1, color="k"
+    )
+    lc_vars["R_t"].sel(lat=slice(-30, 30)).groupby_bins(
+        atms["IWP"].sel(lat=slice(-30, 30)), bins=IWP_bins
+    ).mean().plot(ax=axes[2, 0], color="lime", label="Average")
+    axes[2, 0].plot(result["R_t"], color="magenta", label="Model")
+    axes[2, 0].set_ylabel(r"$\mathrm{R_t}$ / $\mathrm{W ~ m^{-2}}$")
+
+    axes[2, 1].scatter(
+        cut_data(atms["IWP"], mask & lw_vars["mask_hc_no_lc"]),
+        cut_data(sw_vars["high_cloud_albedo"], mask & lw_vars["mask_hc_no_lc"]),
+        s=0.1,
+        color="k",
+    )
+    axes[2, 1].plot(
+        sw_vars_avg.index,
+        sw_vars_avg["interpolated_albedo"],
+        color="lime",
+        label="Average",
+    )
+    axes[2, 1].plot(result["alpha_hc"], color="magenta", label="Model")
+    axes[2, 1].set_ylabel("alpha_hc")
+
+    axes[3, 0].scatter(
+        cut_data(atms["IWP"], mask & lw_vars["mask_hc_no_lc"]),
+        cut_data(lw_vars["high_cloud_emissivity"], mask & lw_vars["mask_hc_no_lc"]),
+        s=0.1,
+        color="k",
+        label="data",
+    )
+    axes[3, 0].plot(
+        lw_vars_avg.index,
+        lw_vars_avg["binned_emissivity"],
+        color="lime",
+        label="Average",
+    )
+    axes[3, 0].plot(result["em_hc"], color="magenta", label="Model")
+    axes[3, 0].set_ylabel("em_hc")
+
+    axes[3, 1].plot(result["SW_cre"], color="blue", label="SW")
+    axes[3, 1].plot(result["LW_cre"], color="red", label="LW")
+    axes[3, 1].plot(result["SW_cre"] + result["LW_cre"], color="k", label="Net")
+    axes[3, 1].plot(
+        cre_average["IWP"], cre_average["all_sw"], color="blue", linestyle="--"
+    )
+    axes[3, 1].plot(
+        cre_average["IWP"], cre_average["all_lw"], color="red", linestyle="--"
+    )
+    axes[3, 1].plot(
+        cre_average["IWP"], cre_average["all_net"], color="k", linestyle="--"
+    )
+    axes[3, 1].set_ylabel("CRE / W m${^-2}$")
+    axes[3, 1].legend()
+
+    for ax in axes.flatten():
+        ax.set_xscale("log")
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.set_title("")
+        ax.set_xlabel("")
+
+    axes[3, 0].set_xlabel("IWP / kg m$^{-2}$")
+    axes[3, 1].set_xlabel("IWP / kg m$^{-2}$")
+    handles, labels = axes[3, 0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="lower center", ncol=3)
+
+    return fig, axes
