@@ -34,7 +34,7 @@ cre_binned["all"], cre_interpolated["all"], cre_interpolated_average["all"] = bi
     IWP_bins,
     lon_bins,
     atms,
-    modus="noice",
+    modus="all",
 )
 # %% high cloud with no low coud below
 cre_binned["ice_only"], cre_interpolated["ice_only"], cre_interpolated_average["ice_only"] = bin_and_average_cre(

@@ -12,15 +12,19 @@ import pickle
 
 # %% read data
 atms, fluxes_3d, fluxes_3d_noice = load_atms_and_fluxes()
-lw_vars = xr.open_dataset("/work/bm1183/m301049/icon_arts_processed/derived_quantities/lw_vars.nc")
-aux = xr.open_dataset("/work/bm1183/m301049/icon_arts_processed/fullrange_flux_mid1deg_noice/aux.nc")
+lw_vars = xr.open_dataset(
+    "/work/bm1183/m301049/icon_arts_processed/derived_quantities/lw_vars.nc"
+)
+aux = xr.open_dataset(
+    "/work/bm1183/m301049/icon_arts_processed/fullrange_flux_mid1deg_noice/aux.nc"
+)
 
- # %% initialize dataset
+# %% initialize dataset
 lc_vars = xr.Dataset()
 mean_lc_vars = pd.DataFrame()
 
-# %% mask of night values 
-mask_night = fluxes_3d['allsky_sw_down'].isel(pressure=-1) == 0 
+# %% mask of night values
+mask_night = fluxes_3d["allsky_sw_down"].isel(pressure=-1) == 0
 
 # %% calculate albedo
 albedo_allsky = np.abs(
@@ -35,10 +39,10 @@ albedo_lc = (albedo_allsky - albedo_clearsky) / (
     albedo_clearsky * (albedo_allsky - 2) + 1
 )
 
-lc_vars['albedo_allsky'] = albedo_allsky
-lc_vars['albedo_clearsky'] = albedo_clearsky
+lc_vars["albedo_allsky"] = albedo_allsky
+lc_vars["albedo_clearsky"] = albedo_clearsky
 
-# %% average and interpolate albedo 
+# %% average and interpolate albedo
 LWP_bins = np.logspace(-14, 2, num=150)
 LWP_points = (LWP_bins[1:] + LWP_bins[:-1]) / 2
 SW_down_bins = np.linspace(0, 1360, 30)
@@ -53,11 +57,7 @@ for i in range(len(LWP_bins) - 1):
             fluxes_3d["allsky_sw_down"].isel(pressure=-1) <= SW_down_bins[j + 1]
         )
         binned_allsky_albedo[i, j] = float(
-            (
-                lc_vars["albedo_allsky"]
-                .where(LWP_mask & SW_mask)
-                .sel(lat=slice(-30, 30))
-            )
+            (lc_vars["albedo_allsky"].where(LWP_mask & SW_mask).sel(lat=slice(-30, 30)))
             .mean()
             .values
         )
@@ -68,11 +68,7 @@ for j in range(len(SW_down_bins) - 1):
         fluxes_3d["clearsky_sw_down"].isel(pressure=-1) <= SW_down_bins[j + 1]
     )
     binned_clearsky_albedo[j] = float(
-        (
-            lc_vars["albedo_clearsky"]
-            .where(SW_mask)
-            .sel(lat=slice(-30, 30))
-        )
+        (lc_vars["albedo_clearsky"].where(SW_mask).sel(lat=slice(-30, 30)))
         .mean()
         .values
     )
@@ -91,10 +87,10 @@ binned_allsky_albedo_interp[np.isnan(binned_allsky_albedo)] = interpolated_value
 fig, axes = plt.subplots(1, 2, figsize=(10, 6))
 
 pcol = axes[0].pcolormesh(
-    LWP_bins, SW_down_bins, binned_allsky_albedo.T , cmap="viridis"
+    LWP_bins, SW_down_bins, binned_allsky_albedo.T, cmap="viridis"
 )
 axes[1].pcolormesh(
-    LWP_bins, SW_down_bins, binned_allsky_albedo_interp.T , cmap="viridis"
+    LWP_bins, SW_down_bins, binned_allsky_albedo_interp.T, cmap="viridis"
 )
 
 axes[0].set_ylabel("SWin at TOA / W m$^{-2}$")
@@ -121,23 +117,39 @@ for i in range(len(LWP_bins) - 1):
 
 mean_lc_vars.index = LWP_points
 mean_lc_vars.index.name = "LWP"
-mean_lc_vars['binned_albedo'] = mean_allsky_albedo
-mean_lc_vars['interpolated_albedo'] = mean_allsky_albedo_interp
+mean_lc_vars["binned_albedo"] = mean_allsky_albedo
+mean_lc_vars["interpolated_albedo"] = mean_allsky_albedo_interp
 mean_clearsky_albedo = np.sum(binned_clearsky_albedo * SW_down) / np.sum(SW_down)
+
+# calculate average albedo for LWP > 1e-6
+number_of_points = np.zeros(len(LWP_points))
+for i in range(len(LWP_bins) - 1):
+    LWP_mask = (atms["LWP"] > LWP_bins[i]) & (atms["LWP"] <= LWP_bins[i + 1])
+    number_of_points[i] = (
+        lc_vars["albedo_allsky"].where(LWP_mask & ~mask_night).count().values
+    )
+
+mask_lwp_bins = LWP_points > 1e-6
+average_albedo = np.sum(
+    mean_lc_vars["interpolated_albedo"][mask_lwp_bins] * number_of_points[mask_lwp_bins]
+) / np.sum(number_of_points[mask_lwp_bins][mean_lc_vars["interpolated_albedo"][mask_lwp_bins] > 0])
+
 
 # %% fit logistic function to weighted and interpolated albedo
 def logistic(x, L, x0, k, j):
-    return L / (1 + np.exp(-k*(x-x0))) + j
+    return L / (1 + np.exp(-k * (x - x0))) + j
+
 
 x = np.log10(LWP_points)
-y = mean_lc_vars['interpolated_albedo']
-y[x<-4] = mean_clearsky_albedo # define albedo as clearsky albedo below LWP of 10^-4
+y = mean_lc_vars["interpolated_albedo"]
+y[x < -4] = mean_clearsky_albedo  # define albedo as clearsky albedo below LWP of 10^-4
 nan_mask = ~np.isnan(y)
 x = x[nan_mask]
 y = y[nan_mask]
 
 popt, pcov = curve_fit(logistic, x, y)
 logistic_curve = logistic(np.log10(LWP_points), *popt)
+
 
 # %% plot albedo vs LWP
 def cut_data(data, mask=True):
@@ -155,24 +167,28 @@ fig, ax = scatterplot(
 )
 
 ax.axhline(mean_clearsky_albedo, color="k", linestyle="-")
+ax.axhline(average_albedo, color="grey", linestyle=":")
 ax.plot(mean_lc_vars["interpolated_albedo"], color="k", linestyle="-")
 ax.plot(LWP_points, logistic_curve, color="r", linestyle="--")
 
-# TODO: calculate constant albedo for LWP > 1e-6 and use it in model instead of logistic function. Make sure to weight in the correct way.  
-
-# %% plot clearsky albedo 
+# %% plot clearsky albedo
 
 fig, ax = scatterplot(
     cut_data(fluxes_3d_noice.isel(pressure=-1)["clearsky_sw_down"], ~mask_night),
     cut_data(lc_vars["albedo_clearsky"], ~mask_night),
-    cut_data(aux['land sea mask'], ~mask_night),
+    cut_data(aux["land sea mask"], ~mask_night),
     logx=False,
-    xlabel='SW Down / W m$^{-2}$',
-    ylabel='Clearsky Albedo',
-    cbar_label='Land Sea Mask',
+    xlabel="SW Down / W m$^{-2}$",
+    ylabel="Clearsky Albedo",
+    cbar_label="Land Sea Mask",
 )
-#  mean ocean albedo 
-mean_ocean_albedo = lc_vars['albedo_clearsky'].where((aux['land sea mask'] < 0) & ~mask_night).sel(lat=slice(-30, 30)).mean()
+#  mean ocean albedo
+mean_ocean_albedo = (
+    lc_vars["albedo_clearsky"]
+    .where((aux["land sea mask"] < 0) & ~mask_night)
+    .sel(lat=slice(-30, 30))
+    .mean()
+)
 print(f"Ocean albedo: {mean_ocean_albedo.values.round(4)}")
 
 
@@ -194,7 +210,8 @@ result = linregress(x_data, y_data)
 
 # %% average R_t over LWP bins
 R_t_binned = cut_data(R_t).groupby_bins(cut_data(atms["LWP"]), LWP_bins).mean()
-mean_lc_vars['binned_R_t'] = R_t_binned
+mean_lc_vars["binned_R_t"] = R_t_binned
+average_r_t = cut_data(R_t).where(mask_lwp).mean().values
 
 # %% plot R_t vs LWP
 fig, ax = scatterplot(
@@ -208,10 +225,16 @@ fig, ax = scatterplot(
 )
 mean_lc_vars["binned_R_t"].plot(ax=ax, color="red", linestyle="-")
 ax.axhline(clearsky_flux, color="k", linestyle="--")
+ax.axhline(average_r_t, color="grey", linestyle=":")
 lwp_points = np.logspace(-6, 2, 100)
-ax.plot(lwp_points, result.intercept + result.slope * np.log10(lwp_points), color="k", linestyle="--")
+ax.plot(
+    lwp_points,
+    result.intercept + result.slope * np.log10(lwp_points),
+    color="k",
+    linestyle="--",
+)
 
-# %% save variables 
+# %% save variables
 path = "/work/bm1183/m301049/icon_arts_processed/derived_quantities/"
 
 lc_vars.to_netcdf(path + "lc_vars.nc")
@@ -224,5 +247,8 @@ with open(path + "R_t_params.pkl", "wb") as f:
 
 with open(path + "alpha_t_params.pkl", "wb") as f:
     pickle.dump(popt, f)
+
+with open(path + "average_a_t_r_t.pkl", "wb") as f:
+    pickle.dump({'a_t': average_albedo, 'R_t': average_r_t}, f)
 
 # %%

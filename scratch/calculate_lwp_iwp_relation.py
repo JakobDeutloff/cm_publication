@@ -41,5 +41,4 @@ result = linregress(x_data, y_data)
 lin_reg = result.intercept + result.slope * np.log10(IWP_points)
 ax.plot(IWP_points, 10**lin_reg, color="k", linestyle="--", label="linear regression")
 
-
 # %%

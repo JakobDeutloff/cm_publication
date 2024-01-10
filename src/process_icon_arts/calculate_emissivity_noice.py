@@ -21,7 +21,8 @@ IWC_emission = 1e-3  # IWP where high clouds become opaque
 
 p_top_idx_thin = atms["IWC"].argmax("pressure")
 p_top_bool_thick = atms["IWC_cumsum"] > IWC_emission
-p_top_idx_thick = p_top_bool_thick.argmin("pressure")
+# finds the first index along pressure where the condition is false,
+p_top_idx_thick = p_top_bool_thick.argmin("pressure") - 1
 p_top_idx = xr.where(p_top_idx_thick > p_top_idx_thin, p_top_idx_thick, p_top_idx_thin)
 p_top = atms.isel(pressure=p_top_idx).pressure
 T_h_lw = atms["temperature"].sel(pressure=p_top)
@@ -33,6 +34,35 @@ mask_hc_no_lc = (atms["IWP"] > 1e-7) & (atms["LWP"] < 1e-7)
 mask_height = p_top < 35000
 lw_vars["mask_height"] = mask_height
 lw_vars["mask_hc_no_lc"] = mask_hc_no_lc
+
+# %% plot p_top
+import matplotlib as mpl
+
+fig, ax = plt.subplots(figsize=(7, 5))
+sc = ax.scatter(
+    atms["IWP"].sel(lat=slice(-30, 30)),
+    p_top.sel(lat=slice(-30, 30)) / 100,
+    s=0.1,
+    c=atms["LWP"].sel(lat=slice(-30, 30)),
+    norm=mpl.colors.LogNorm(vmin=1e-6),
+    cmap="viridis",
+)
+ax.set_xscale("log")
+ax.axhline(350, color="r")
+ax.invert_yaxis()
+cb = fig.colorbar(sc, extend="min")
+cb.set_label("LWP / kg m$^{-2}$")
+ax.set_xlabel("IWP / kg m$^{-2}$")
+ax.set_ylabel("p$_{top}$ / hPa")
+ax.spines["right"].set_visible(False)
+ax.spines["top"].set_visible(False)
+fig.savefig("plots/p_top.png", dpi=300, bbox_inches="tight")
+
+# %% look where low p_tops are coming from 
+mask_low_p_top = p_top == atms.pressure[0]
+profiles = atms.where(mask_low_p_top).sel(lat=slice(-30, 30))
+profiles['graupel'].sum('pressure').max(['lat', 'lon'])
+# they are caused by profiles with snow and graupel but no cloud ice 
 
 # %% calculate high cloud emissivity
 sigma = 5.67e-8  # W m-2 K-4
@@ -52,9 +82,7 @@ IWP_bins = np.logspace(-5, 1, num=50)
 IWP_points = (IWP_bins[1:] + IWP_bins[:-1]) / 2
 mean_hc_emissivity = (
     cut_data(lw_vars["high_cloud_emissivity"], mask_height & mask_hc_no_lc)
-    .groupby_bins(
-        cut_data(atms["IWP"], mask_height & mask_hc_no_lc), IWP_bins, labels=IWP_points
-    )
+    .groupby_bins(cut_data(atms["IWP"], mask_height & mask_hc_no_lc), IWP_bins, labels=IWP_points)
     .mean()
 )
 
@@ -80,7 +108,6 @@ popt[0] = 1
 logistic_curve = logistic(np.log10(IWP_points), *popt)
 
 # %% plot mean hv emissivity in scatterplot with IWP
-
 fig, ax = scatterplot(
     cut_data(atms["IWP"], mask_height & mask_hc_no_lc),
     cut_data(lw_vars["high_cloud_emissivity"], mask_height & mask_hc_no_lc),

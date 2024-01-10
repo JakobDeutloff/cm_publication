@@ -2,6 +2,7 @@
 import xarray as xr
 import pickle
 
+
 # %% load data
 def load_atms_and_fluxes():
     """
@@ -68,9 +69,9 @@ def load_derived_vars():
     return lw_vars, sw_vars, lc_vars
 
 
-def load_averaged_derived_variables():
+def load_binned_derived_variables():
     """
-    Load the averaged derived variables.
+    Load the binned and averaged derived variables.
 
     Returns
     -------
@@ -93,10 +94,9 @@ def load_averaged_derived_variables():
 
 
 def load_parameters():
-
     """
     Load the parameters needed for the model.
-    
+
     Returns
     -------
     hc_albedo : dict
@@ -113,9 +113,29 @@ def load_parameters():
         hc_albedo = pickle.load(f)
     with open(path + "hc_emissivity_params.pkl", "rb") as f:
         hc_emissivity = pickle.load(f)
-    with open(path + 'alpha_t_params.pkl', 'rb') as f:
-        alpha_t = pickle.load(f)  
-    with open(path + 'R_t_params.pkl', 'rb') as f:
+    with open(path + "alpha_t_params.pkl", "rb") as f:
+        alpha_t = pickle.load(f)
+    with open(path + "R_t_params.pkl", "rb") as f:
         R_t = pickle.load(f)
 
-    return {"alpha_hc": hc_albedo, "em_hc": hc_emissivity, "alpha_t": alpha_t, "R_t": R_t}
+    return {
+        "alpha_hc": hc_albedo,
+        "em_hc": hc_emissivity,
+        "alpha_t": alpha_t,
+        "R_t": R_t,
+    }
+
+def load_average_lc_parameters():
+    """
+    Load the average lc parameters needed for the model.
+    
+    Returns
+    -------
+    average_lc_params : dict
+        Average parameters for a_t and R_t."""
+
+    path = "/work/bm1183/m301049/icon_arts_processed/derived_quantities/"
+    with open(path + "average_a_t_r_t.pkl", "rb") as f:
+        average_lc_params = pickle.load(f)
+
+    return average_lc_params

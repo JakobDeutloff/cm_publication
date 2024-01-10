@@ -6,7 +6,7 @@ import cartopy.crs as ccrs
 
 # %% load data from freddis runs
 path_freddi = "/work/bm1183/m301049/icon_arts_processed/"
-run = "fullrange_flux_mid1deg/"
+run = "fullrange_flux_mid1deg_noice/"
 atms = xr.open_dataset(path_freddi + run + "atms.nc")
 fluxes_3d = xr.open_dataset(path_freddi + run + "fluxes_3d.nc")
 aux = xr.open_dataset(path_freddi + run + "aux.nc")
@@ -26,16 +26,26 @@ for flux in fluxes:
     fluxes_3d[flux] = fluxes_3d[flux] * -1
 
 # %% calculate IWP and LWP
-cell_height = atms["geometric height"].diff(
-    "pressure"
-)  # not correct, we would need height ad half levels
-atms["IWP"] = ((atms["IWC"] + atms["snow"] + atms["graupel"]) * cell_height).sum(
-    "pressure"
+cell_height = atms["geometric height"].diff("pressure")
+# not correct, we would need height at half levels
+# set cell heigth in lowest box to the value above
+cell_height_bottom = xr.DataArray(
+    data=cell_height.isel(pressure=0).values,
+    dims=["lat", "lon"],
+    coords={
+        "pressure": fluxes_3d["pressure"][0],
+        "lat": fluxes_3d["lat"],
+        "lon": fluxes_3d["lon"],
+    },
 )
-atms["IWC_cumsum"] = (atms["IWC"] * cell_height).cumsum("pressure")
-atms["IWC_cumsum"] = atms["IWC_cumsum"].where(~atms["IWC_cumsum"].isnull(), 0)
-atms["IWC_cumsum"] = -1 * (atms["IWC_cumsum"] - atms["IWC_cumsum"].isel(pressure=-1))
+cell_height = xr.concat([cell_height_bottom, cell_height], dim="pressure")
+# %% Calculate LWP and IWP
+atms["IWP"] = ((atms["IWC"] + atms["snow"] + atms["graupel"]) * cell_height).sum("pressure")
 atms["LWP"] = ((atms["rain"] + atms["LWC"]) * cell_height).sum("pressure")
+
+# ice mass needs to be reversed along pressure coord to calculate cumsum from the toa
+ice_mass = ((atms["IWC"]) * cell_height).reindex(pressure=list(reversed(atms.pressure)))
+atms["IWC_cumsum"] = ice_mass.cumsum("pressure").reindex(pressure=list(reversed(atms.pressure)))
 
 # %% calculate lc fraction
 lc_fraction = (atms["LWP"] > 1e-6) * 1
@@ -99,12 +109,10 @@ fluxes_3d["clearsky_hr_sw"] = clearsky_hr_sw
 
 # %% calculate albedo
 fluxes_3d["albedo_allsky"] = np.abs(
-    fluxes_3d["allsky_sw_up"].isel(pressure=-1)
-    / fluxes_3d["allsky_sw_down"].isel(pressure=-1)
+    fluxes_3d["allsky_sw_up"].isel(pressure=-1) / fluxes_3d["allsky_sw_down"].isel(pressure=-1)
 )
 fluxes_3d["albedo_clearsky"] = np.abs(
-    fluxes_3d["clearsky_sw_up"].isel(pressure=-1)
-    / fluxes_3d["clearsky_sw_down"].isel(pressure=-1)
+    fluxes_3d["clearsky_sw_up"].isel(pressure=-1) / fluxes_3d["clearsky_sw_down"].isel(pressure=-1)
 )
 
 # %% save results
