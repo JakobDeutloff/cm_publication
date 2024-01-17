@@ -119,7 +119,7 @@ def calc_alpha_t(
 
 
 def calc_R_t(
-    LWP, lc_fraction, R_t_cs, R_t_params, const_lc_quantities, prescribed_lc_quantities
+    LWP, IWP, lc_fraction, R_t_cs, R_t_params, h20_params, const_lc_quantities, prescribed_lc_quantities
 ):
     """
     Calculates the LW radiation from below the high clouds.
@@ -145,9 +145,10 @@ def calc_R_t(
     if const_lc_quantities is not None:
         lc_value = const_lc_quantities["R_t"]
     else:
-        lc_value = R_t_params.slope * LWP + R_t_params.intercept
+        lc_value = R_t_params.slope * np.log10(LWP) + R_t_params.intercept
         lc_value[lc_value < R_t_cs] = R_t_cs
-    avg_value = lc_fraction * lc_value + (1 - lc_fraction) * R_t_cs
+    h2o_correction = h20_params.slope * np.log10(IWP) + h20_params.intercept
+    avg_value = lc_fraction * lc_value + (1 - lc_fraction) * R_t_cs + h2o_correction
     if prescribed_lc_quantities is not None:
         avg_value = prescribed_lc_quantities["R_t"]
     return avg_value
@@ -260,9 +261,11 @@ def run_model(
     )
     R_t = calc_R_t(
         LWP_binned,
+        IWP_points,
         lc_fraction_binned,
         R_t_cs,
         parameters["R_t"],
+        parameters["h2o_dependence"],
         const_lc_quantities,
         prescribed_lc_quantities,
     )

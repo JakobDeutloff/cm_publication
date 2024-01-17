@@ -18,7 +18,7 @@ lw_vars = xr.Dataset()
 mean_lw_vars = pd.DataFrame()
 
 # %% calculate high cloud temperature from vertically integrated IWP
-IWP_emission = 2e-3  # IWP where high clouds become opaque
+IWP_emission = 3e-3  # IWP where high clouds become opaque
 
 p_top_idx_thin = (atms["IWC"] + atms['snow'] + atms['graupel']).argmax("pressure")
 p_top_bool_thick = atms["IWC_cumsum"] > IWP_emission
@@ -90,7 +90,7 @@ def logistic(x, L, x0, k):
 
 
 x = np.log10(IWP_points)
-y = mean_lw_vars["binned_emissivity"]
+y = mean_lw_vars["binned_emissivity"].copy()
 y[IWP_points > 1e-1] = 1
 nan_mask = ~np.isnan(y)
 x = x[nan_mask]

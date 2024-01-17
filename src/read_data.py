@@ -117,12 +117,15 @@ def load_parameters():
         alpha_t = pickle.load(f)
     with open(path + "R_t_params.pkl", "rb") as f:
         R_t = pickle.load(f)
+    with open(path + "water_vapor_dependence.pkl", "rb") as f:
+        h2o_dependence = pickle.load(f)
 
     return {
         "alpha_hc": hc_albedo,
         "em_hc": hc_emissivity,
         "alpha_t": alpha_t,
         "R_t": R_t,
+        "h2o_dependence": h2o_dependence,
     }
 
 def load_average_lc_parameters():

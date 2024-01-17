@@ -55,8 +55,8 @@ result = run_model(
     LWP = cut_data(atms['LWP'], mask),
     IWP = cut_data(atms['IWP'], mask),
     parameters = parameters,
-    const_lc_quantities=None,
-    prescribed_lc_quantities=prescribed_lc_quantitites
+    const_lc_quantities=const_lc_quantities,
+    prescribed_lc_quantities=None
 )
 
 # %% plot model results
