@@ -18,10 +18,10 @@ lw_vars = xr.Dataset()
 mean_lw_vars = pd.DataFrame()
 
 # %% calculate high cloud temperature from vertically integrated IWP
-IWC_emission = 1e-3  # IWP where high clouds become opaque
+IWP_emission = 2e-3  # IWP where high clouds become opaque
 
 p_top_idx_thin = (atms["IWC"] + atms['snow'] + atms['graupel']).argmax("pressure")
-p_top_bool_thick = atms["IWC_cumsum"] > IWC_emission
+p_top_bool_thick = atms["IWC_cumsum"] > IWP_emission
 # finds the first index along pressure where the condition is false,
 p_top_idx_thick = p_top_bool_thick.argmin("pressure") - 1
 p_top_idx = xr.where(p_top_idx_thick > p_top_idx_thin, p_top_idx_thick, p_top_idx_thin)
@@ -56,12 +56,6 @@ ax.set_ylabel("p$_{top}$ / hPa")
 ax.spines["right"].set_visible(False)
 ax.spines["top"].set_visible(False)
 fig.savefig("plots/p_top.png", dpi=300, bbox_inches="tight")
-
-# %% look where low p_tops are coming from 
-mask_low_p_top = p_top == atms.pressure[0]
-profiles = atms.where(mask_low_p_top).sel(lat=slice(-30, 30))
-profiles['graupel'].sum('pressure').max(['lat', 'lon'])
-# they are caused by profiles with snow and graupel but no cloud ice 
 
 # %% calculate high cloud emissivity
 sigma = 5.67e-8  # W m-2 K-4

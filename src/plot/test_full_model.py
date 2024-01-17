@@ -77,7 +77,7 @@ fig, axes = plot_model_output(
 
 fig.suptitle("Prescribed LC Quantities", fontsize=12)
 fig.tight_layout()
-fig.savefig("plots/model_tests/prescribed_lc_params_all_ice.png", dpi=300)
+#fig.savefig("plots/model_tests/prescribed_lc_params_all_ice.png", dpi=300)
 
  # %% run model for all profiles with cloud tops above 350 hPa and no low clouds below the high clouds 
 mask = lw_vars["mask_height"] & lw_vars['mask_hc_no_lc']
@@ -112,7 +112,7 @@ fig, axes = plot_model_output(
 )
 fig.suptitle("No LC Below HC", fontsize=12)
 fig.tight_layout()
-fig.savefig("plots/model_tests/hc_no_lc.png", dpi=300)
+#fig.savefig("plots/model_tests/hc_no_lc.png", dpi=300)
 
 # %% run model for all profiles with cloud tops above 350 hPa and low clouds below the high clouds
 mask = lw_vars["mask_height"] & ~lw_vars['mask_hc_no_lc']
