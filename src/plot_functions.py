@@ -324,7 +324,7 @@ def plot_model_output(
 
     # lc fraction
     axes[1, 0].plot(result["lc_fraction"], color="magenta")
-    axes[1, 0].set_ylabel("lc_fraction")
+    axes[1, 0].set_ylabel(r"$f$")
 
     # alpha_t
     axes[1, 1].scatter(
@@ -335,9 +335,9 @@ def plot_model_output(
     )
     cut_data(fluxes_3d_noice["albedo_allsky"], mask).groupby_bins(
         cut_data(atms["IWP"], mask), bins=IWP_bins
-    ).mean().plot(ax=axes[1, 1], color="lime", label="Average")
+    ).mean().plot(ax=axes[1, 1], color="limegreen", label="Average")
     axes[1, 1].plot(result["alpha_t"], color="magenta", label="Model")
-    axes[1, 1].set_ylabel("alpha_t")
+    axes[1, 1].set_ylabel(r"$\alpha_t$")
 
     # R_t
     axes[2, 0].scatter(
@@ -345,30 +345,31 @@ def plot_model_output(
     )
     cut_data(lc_vars["R_t"], mask).groupby_bins(
         cut_data(atms["IWP"],mask), bins=IWP_bins
-    ).mean().plot(ax=axes[2, 0], color="lime", label="Average")
+    ).mean().plot(ax=axes[2, 0], color="limegreen", label="Average")
     axes[2, 0].plot(result["R_t"], color="magenta", label="Model")
     axes[2, 0].set_ylabel(r"$\mathrm{R_t}$ / $\mathrm{W ~ m^{-2}}$")
 
     # hc albedo
     axes[2, 1].scatter(
-        cut_data(atms["IWP"], mask & lw_vars["mask_hc_no_lc"]),
-        cut_data(sw_vars["high_cloud_albedo"], mask & lw_vars["mask_hc_no_lc"]),
+        cut_data(atms["IWP"], mask),
+        cut_data(sw_vars["high_cloud_albedo"], mask),
         s=0.1,
         color="k",
     )
     axes[2, 1].plot(
         sw_vars_avg.index,
         sw_vars_avg["interpolated_albedo"],
-        color="lime",
+        color="limegreen",
         label="Average",
     )
     axes[2, 1].plot(result["alpha_hc"], color="magenta", label="Model")
-    axes[2, 1].set_ylabel("alpha_hc")
+    axes[2, 1].set_ylabel(r"$\alpha$")
+    axes[2, 1].set_ylim(0, 1)
 
     # hc emissivity
     axes[3, 0].scatter(
-        cut_data(atms["IWP"], mask & lw_vars["mask_hc_no_lc"]),
-        cut_data(lw_vars["high_cloud_emissivity"], mask & lw_vars["mask_hc_no_lc"]),
+        cut_data(atms["IWP"], mask),
+        cut_data(lw_vars["high_cloud_emissivity"], mask),
         s=0.1,
         color="k",
         label="data",
@@ -376,11 +377,12 @@ def plot_model_output(
     axes[3, 0].plot(
         lw_vars_avg.index,
         lw_vars_avg["binned_emissivity"],
-        color="lime",
+        color="limegreen",
         label="Average",
     )
     axes[3, 0].plot(result["em_hc"], color="magenta", label="Model")
-    axes[3, 0].set_ylabel("em_hc")
+    axes[3, 0].set_ylabel(r"$\epsilon$")
+    axes[3, 0].set_ylim(0, 1.3)
 
     # CRE
     axes[3, 1].plot(result["SW_cre"], color="blue", label="SW")
@@ -396,7 +398,7 @@ def plot_model_output(
         axes[3, 1].plot(
             cre_average["IWP"], cre_average["all_net"], color="k", linestyle="--"
         )
-    if mode == 'ice_only':
+    elif mode == 'ice_only':
         axes[3, 1].plot(
             cre_average["IWP"], cre_average["ice_only_sw"], color="blue", linestyle="--"
         )
@@ -406,8 +408,19 @@ def plot_model_output(
         axes[3, 1].plot(
             cre_average["IWP"], cre_average["ice_only_net"], color="k", linestyle="--"
         )
+    elif mode == 'ice_over_lc':
+        axes[3, 1].plot(
+            cre_average["IWP"], cre_average["ice_over_lc_sw"], color="blue", linestyle="--"
+        )
+        axes[3, 1].plot(
+            cre_average["IWP"], cre_average["ice_over_lc_lw"], color="red", linestyle="--"
+        )
+        axes[3, 1].plot(
+            cre_average["IWP"], cre_average["ice_over_lc_net"], color="k", linestyle="--"
+        )
     else:
-        pass
+        raise ValueError('mode must be one of "all", "ice_only", "ice_over_lc"')
+
     axes[3, 1].set_ylabel("CRE / W m${^-2}$")
     axes[3, 1].legend()
 

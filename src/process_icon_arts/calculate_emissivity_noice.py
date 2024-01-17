@@ -8,6 +8,7 @@ import pandas as pd
 from src.read_data import load_atms_and_fluxes
 from src.plot_functions import scatterplot
 from scipy.optimize import curve_fit
+import matplotlib as mpl
 
 # %% load freddis data
 atms, fluxes_3d, fluxes_3d_noice = load_atms_and_fluxes()
@@ -19,7 +20,7 @@ mean_lw_vars = pd.DataFrame()
 # %% calculate high cloud temperature from vertically integrated IWP
 IWC_emission = 1e-3  # IWP where high clouds become opaque
 
-p_top_idx_thin = atms["IWC"].argmax("pressure")
+p_top_idx_thin = (atms["IWC"] + atms['snow'] + atms['graupel']).argmax("pressure")
 p_top_bool_thick = atms["IWC_cumsum"] > IWC_emission
 # finds the first index along pressure where the condition is false,
 p_top_idx_thick = p_top_bool_thick.argmin("pressure") - 1
@@ -36,8 +37,6 @@ lw_vars["mask_height"] = mask_height
 lw_vars["mask_hc_no_lc"] = mask_hc_no_lc
 
 # %% plot p_top
-import matplotlib as mpl
-
 fig, ax = plt.subplots(figsize=(7, 5))
 sc = ax.scatter(
     atms["IWP"].sel(lat=slice(-30, 30)),

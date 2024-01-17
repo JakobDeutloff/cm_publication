@@ -47,7 +47,6 @@ LWP_bins = np.logspace(-14, 2, num=150)
 LWP_points = (LWP_bins[1:] + LWP_bins[:-1]) / 2
 SW_down_bins = np.linspace(0, 1360, 30)
 binned_allsky_albedo = np.zeros([len(LWP_bins) - 1, len(SW_down_bins) - 1]) * np.nan
-binned_clearsky_albedo = np.zeros(len(SW_down_bins) - 1) * np.nan
 
 # allsky albedo depends on SW and LWP
 for i in range(len(LWP_bins) - 1):
@@ -61,17 +60,6 @@ for i in range(len(LWP_bins) - 1):
             .mean()
             .values
         )
-
-# clearsky albedo depends on SW only
-for j in range(len(SW_down_bins) - 1):
-    SW_mask = (fluxes_3d["clearsky_sw_down"].isel(pressure=-1) > SW_down_bins[j]) & (
-        fluxes_3d["clearsky_sw_down"].isel(pressure=-1) <= SW_down_bins[j + 1]
-    )
-    binned_clearsky_albedo[j] = float(
-        (lc_vars["albedo_clearsky"].where(SW_mask).sel(lat=slice(-30, 30)))
-        .mean()
-        .values
-    )
 
 # %% interpolate albedo bins
 non_nan_indices = np.array(np.where(~np.isnan(binned_allsky_albedo)))
@@ -119,7 +107,7 @@ mean_lc_vars.index = LWP_points
 mean_lc_vars.index.name = "LWP"
 mean_lc_vars["binned_albedo"] = mean_allsky_albedo
 mean_lc_vars["interpolated_albedo"] = mean_allsky_albedo_interp
-mean_clearsky_albedo = np.sum(binned_clearsky_albedo * SW_down) / np.sum(SW_down)
+mean_clearsky_albedo = lc_vars["albedo_clearsky"].sel(lat=slice(-30, 30)).mean().values
 
 # calculate average albedo for LWP > 1e-6
 number_of_points = np.zeros(len(LWP_points))
@@ -166,10 +154,13 @@ fig, ax = scatterplot(
     xlim=[1e-14, 1e2],
 )
 
-ax.axhline(mean_clearsky_albedo, color="k", linestyle="-")
-ax.axhline(average_albedo, color="grey", linestyle=":")
-ax.plot(mean_lc_vars["interpolated_albedo"], color="k", linestyle="-")
-ax.plot(LWP_points, logistic_curve, color="r", linestyle="--")
+ax.axhline(mean_clearsky_albedo, color="k", linestyle="--", label="Mean clearsky")
+ax.axhline(average_albedo, color="grey", linestyle="--", label='Mean low cloud')
+ax.plot(mean_lc_vars["interpolated_albedo"], color="k", linestyle="-", label="Mean")
+ax.plot(LWP_points, logistic_curve, color="r", linestyle="--", label="Fit")
+ax.legend()
+fig.tight_layout()
+fig.savefig("plots/albedo_vs_LWP.png", dpi=300)
 
 # %% plot clearsky albedo
 
@@ -194,9 +185,9 @@ print(f"Ocean albedo: {mean_ocean_albedo.values.round(4)}")
 
 # %% calculate R_t
 R_t = fluxes_3d_noice.isel(pressure=-1)["allsky_lw_up"]
-clearsky_flux = (
+clearsky_R_t = (
     fluxes_3d_noice.isel(pressure=-1)["clearsky_lw_up"].sel(lat=slice(-30, 30)).mean()
-)
+).values
 lc_vars["R_t"] = R_t
 
 # %% linear regression of R_t vs LWP for LWP > 1e-6
@@ -211,28 +202,39 @@ result = linregress(x_data, y_data)
 # %% average R_t over LWP bins
 R_t_binned = cut_data(R_t).groupby_bins(cut_data(atms["LWP"]), LWP_bins).mean()
 mean_lc_vars["binned_R_t"] = R_t_binned
-average_r_t = cut_data(R_t).where(mask_lwp).mean().values
+lc_R_t = cut_data(R_t).where(mask_lwp).mean().values
 
 # %% plot R_t vs LWP
-fig, ax = scatterplot(
-    cut_data(atms["LWP"]),
-    cut_data(lc_vars["R_t"]),
-    cut_data(fluxes_3d_noice.isel(pressure=-1)["clearsky_sw_down"]),
-    xlabel="LWP / kg m$^{-2}$",
-    ylabel="R$_t$",
-    cbar_label="SW Down / W m$^{-2}$",
-    xlim=[1e-6, 1e2],
-)
-mean_lc_vars["binned_R_t"].plot(ax=ax, color="red", linestyle="-")
-ax.axhline(clearsky_flux, color="k", linestyle="--")
-ax.axhline(average_r_t, color="grey", linestyle=":")
-lwp_points = np.logspace(-6, 2, 100)
+fig, ax = plt.subplots()
+
+ax.scatter(cut_data(atms["LWP"]),cut_data(lc_vars["R_t"]), marker=".", s=1, color="blue")
+
+mean_lc_vars["binned_R_t"].plot(ax=ax, color="k", linestyle="-", label='Mean')
+ax.axhline(clearsky_R_t, color="k", linestyle="--", label='Mean clearsky')
+ax.axhline(lc_R_t, color="grey", linestyle="--", label='Mean low cloud')
+lwp_points = np.logspace(-14, 2, 100)
+
+# regression line
+y = result.intercept + result.slope * np.log10(lwp_points)
+mask = y > clearsky_R_t
+y[~mask] = clearsky_R_t
 ax.plot(
     lwp_points,
-    result.intercept + result.slope * np.log10(lwp_points),
-    color="k",
+    y,
+    color="red",
     linestyle="--",
+    label='Fit'
 )
+
+ax.spines["top"].set_visible(False)
+ax.spines["right"].set_visible(False)
+ax.set_xscale("log")
+ax.set_xlabel("LWP / kg m$^{-2}$")
+ax.set_ylabel("R$_t$ / W m$^{-2}$")
+ax.legend()
+fig.tight_layout()
+fig.savefig("plots/R_t_vs_LWP.png", dpi=300)
+
 
 # %% save variables
 path = "/work/bm1183/m301049/icon_arts_processed/derived_quantities/"
@@ -249,6 +251,6 @@ with open(path + "alpha_t_params.pkl", "wb") as f:
     pickle.dump(popt, f)
 
 with open(path + "average_a_t_r_t.pkl", "wb") as f:
-    pickle.dump({'a_t': average_albedo, 'R_t': average_r_t}, f)
+    pickle.dump({'a_t': average_albedo, 'R_t': lc_R_t}, f)
 
 # %%
