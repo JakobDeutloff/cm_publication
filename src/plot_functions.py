@@ -356,12 +356,6 @@ def plot_model_output(
         s=0.1,
         color="k",
     )
-    axes[2, 1].plot(
-        sw_vars_avg.index,
-        sw_vars_avg["interpolated_albedo"],
-        color="limegreen",
-        label="Average",
-    )
     axes[2, 1].plot(result["alpha_hc"], color="magenta", label="Model")
     axes[2, 1].set_ylabel(r"$\alpha$")
     axes[2, 1].set_ylim(0, 1)
@@ -374,12 +368,9 @@ def plot_model_output(
         color="k",
         label="data",
     )
-    axes[3, 0].plot(
-        lw_vars_avg.index,
-        lw_vars_avg["binned_emissivity"],
-        color="limegreen",
-        label="Average",
-    )
+    cut_data(lw_vars["high_cloud_emissivity"], mask).groupby_bins(
+        cut_data(atms["IWP"],mask), bins=IWP_bins
+    ).median().plot(ax=axes[3, 0], color="limegreen", label="Average")
     axes[3, 0].plot(result["em_hc"], color="magenta", label="Model")
     axes[3, 0].set_ylabel(r"$\epsilon$")
     axes[3, 0].set_ylim(0, 1.3)

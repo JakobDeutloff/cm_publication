@@ -25,7 +25,7 @@ fluxes = [
 for flux in fluxes:
     fluxes_3d[flux] = fluxes_3d[flux] * -1
 
-# %% calculate IWP and LWP
+# %% calculate celll height
 cell_height = atms["geometric height"].diff("pressure")
 # not correct, we would need height at half levels
 # set cell heigth in lowest box to the value above

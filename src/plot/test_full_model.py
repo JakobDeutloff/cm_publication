@@ -13,6 +13,7 @@ from src.read_data import (
 )
 from src.plot_functions import plot_model_output
 from src.icon_arts_analysis import cut_data
+import pickle
 
 
 # %% load data
@@ -22,6 +23,7 @@ lw_vars_avg, sw_vars_avg, lc_vars_avg = load_binned_derived_variables()
 parameters = load_parameters()
 cre_binned, cre_interpolated, cre_average = load_cre()
 const_lc_quantities = load_average_lc_parameters()
+model_results={}
 
 # %% calculate constants used in the model
 albedo_cs = cut_data(fluxes_3d["albedo_clearsky"]).mean()
@@ -33,7 +35,7 @@ parameters['threshold_lc_fraction'] = 1e-6
 
 # %% set mask ans bins 
 mask = lw_vars["mask_height"]
-IWP_bins = np.logspace(-5, 1, num=70)
+IWP_bins = np.logspace(-5, 1, num=50)
 
 # %% calculate presctibed lc quantities
 prescribed_lc_quantitites = {
@@ -58,7 +60,7 @@ result = run_model(
     const_lc_quantities=const_lc_quantities,
     prescribed_lc_quantities=None
 )
-
+model_results['all'] = result
 # %% plot model results
 fig, axes = plot_model_output(
     result,
@@ -74,10 +76,10 @@ fig, axes = plot_model_output(
     cre_average,
     mode='all'
 )
-
-fig.suptitle("Prescribed LC Quantities", fontsize=12)
+per_gridcells = (mask*1).sel(lat=slice(-30, 30)).mean().values * 100
+fig.suptitle(f"All Valid High Clouds ({per_gridcells:.0f}% of gridcells)", fontsize=12)
 fig.tight_layout()
-#fig.savefig("plots/model_tests/prescribed_lc_params_all_ice.png", dpi=300)
+fig.savefig("plots/model_tests/8_cli_all.png", dpi=300)
 
  # %% run model for all profiles with cloud tops above 350 hPa and no low clouds below the high clouds 
 mask = lw_vars["mask_height"] & lw_vars['mask_hc_no_lc']
@@ -94,6 +96,7 @@ result = run_model(
     const_lc_quantities=const_lc_quantities,
     prescribed_lc_quantities=None
 )
+model_results['ice_only'] = result
 
 # %% plot results
 fig, axes = plot_model_output(
@@ -110,9 +113,10 @@ fig, axes = plot_model_output(
     cre_average,
     mode='ice_only'
 )
-fig.suptitle("No LC Below HC", fontsize=12)
+per_gridcells = (mask*1).sel(lat=slice(-30, 30)).mean().values * 100
+fig.suptitle(f"High Clouds without Low Clouds ({per_gridcells:.0f}% of gridcells)", fontsize=12)
 fig.tight_layout()
-#fig.savefig("plots/model_tests/hc_no_lc.png", dpi=300)
+fig.savefig("plots/model_tests/8_cli_hc_no_lc.png", dpi=300)
 
 # %% run model for all profiles with cloud tops above 350 hPa and low clouds below the high clouds
 mask = lw_vars["mask_height"] & ~lw_vars['mask_hc_no_lc']
@@ -129,7 +133,7 @@ result = run_model(
     const_lc_quantities=const_lc_quantities,
     prescribed_lc_quantities=None
 )
-
+model_results['ice_over_lc'] = result
 
 # %% plot results
 fig, axes = plot_model_output(
@@ -146,5 +150,15 @@ fig, axes = plot_model_output(
     cre_average,
     mode='ice_over_lc'
 )
+per_gridcells = (mask*1).sel(lat=slice(-30, 30)).mean().values * 100
+fig.suptitle(f"High Clouds with Low Clouds ({per_gridcells:.0f}% of gridcells)", fontsize=12)
+fig.tight_layout()
+fig.savefig("plots/model_tests/8_cli_hc_and_lc.png", dpi=300)
+
+# %% save results
+path = "/work/bm1183/m301049/icon_arts_processed/derived_quantities/"
+with open(path + "model_results.pkl", "wb") as f:
+    pickle.dump(model_results, f)
+    
 
 # %%

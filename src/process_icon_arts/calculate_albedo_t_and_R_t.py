@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from src.read_data import load_atms_and_fluxes
 from src.plot_functions import scatterplot
+from src.icon_arts_analysis import cut_data
 from scipy.stats import linregress
 from scipy.interpolate import griddata
 from scipy.optimize import curve_fit
@@ -114,11 +115,11 @@ number_of_points = np.zeros(len(LWP_points))
 for i in range(len(LWP_bins) - 1):
     LWP_mask = (atms["LWP"] > LWP_bins[i]) & (atms["LWP"] <= LWP_bins[i + 1])
     number_of_points[i] = (
-        lc_vars["albedo_allsky"].where(LWP_mask & ~mask_night).count().values
+        cut_data(lc_vars["albedo_allsky"], ~mask_night).where(LWP_mask & ~mask_night).count().values
     )
 
 mask_lwp_bins = LWP_points > 1e-6
-average_albedo = np.sum(
+mean_cloud_albedo = np.sum(
     mean_lc_vars["interpolated_albedo"][mask_lwp_bins] * number_of_points[mask_lwp_bins]
 ) / np.sum(number_of_points[mask_lwp_bins][mean_lc_vars["interpolated_albedo"][mask_lwp_bins] > 0])
 
@@ -140,10 +141,6 @@ logistic_curve = logistic(np.log10(LWP_points), *popt)
 
 
 # %% plot albedo vs LWP
-def cut_data(data, mask=True):
-    return data.sel(lat=slice(-30, 30)).where(mask)
-
-
 fig, ax = scatterplot(
     cut_data(atms["LWP"], ~mask_night),
     cut_data(lc_vars["albedo_allsky"], ~mask_night),
@@ -155,7 +152,7 @@ fig, ax = scatterplot(
 )
 
 ax.axhline(mean_clearsky_albedo, color="k", linestyle="--", label="Mean clearsky")
-ax.axhline(average_albedo, color="grey", linestyle="--", label='Mean low cloud')
+ax.axhline(mean_cloud_albedo, color="grey", linestyle="--", label='Mean low cloud')
 ax.plot(mean_lc_vars["interpolated_albedo"], color="k", linestyle="-", label="Mean")
 ax.plot(LWP_points, logistic_curve, color="r", linestyle="--", label="Fit")
 ax.legend()
@@ -251,6 +248,6 @@ with open(path + "alpha_t_params.pkl", "wb") as f:
     pickle.dump(popt, f)
 
 with open(path + "average_a_t_r_t.pkl", "wb") as f:
-    pickle.dump({'a_t': average_albedo, 'R_t': lc_R_t}, f)
+    pickle.dump({'a_t': mean_cloud_albedo, 'R_t': lc_R_t}, f)
 
 # %%

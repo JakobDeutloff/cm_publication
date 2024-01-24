@@ -18,19 +18,17 @@ lw_vars = xr.Dataset()
 mean_lw_vars = pd.DataFrame()
 
 # %% calculate high cloud temperature from vertically integrated IWP
-IWP_emission = 3e-3  # IWP where high clouds become opaque
+IWP_emission = 8e-3  # IWP where high clouds become opaque
 
 p_top_idx_thin = (atms["IWC"] + atms['snow'] + atms['graupel']).argmax("pressure")
-p_top_bool_thick = atms["IWC_cumsum"] > IWP_emission
-# finds the first index along pressure where the condition is false,
-p_top_idx_thick = p_top_bool_thick.argmin("pressure") - 1
+p_top_idx_thick = np.abs(atms["IWC_cumsum"] - IWP_emission).argmin("pressure")
 p_top_idx = xr.where(p_top_idx_thick > p_top_idx_thin, p_top_idx_thick, p_top_idx_thin)
 p_top = atms.isel(pressure=p_top_idx).pressure
 T_h_lw = atms["temperature"].sel(pressure=p_top)
 lw_vars["h_cloud_temperature"] = T_h_lw
 lw_vars["h_cloud_top_pressure"] = p_top
 
-# %% find profiles with high clouds and no thick graupel layers below above 350 hPa
+# %% find profiles with high cloud tops above 350 hPa
 mask_hc_no_lc = (atms["IWP"] > 1e-7) & (atms["LWP"] < 1e-7)
 mask_height = p_top < 35000
 lw_vars["mask_height"] = mask_height
