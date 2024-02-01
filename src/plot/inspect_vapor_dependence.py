@@ -56,26 +56,22 @@ axes[0].scatter(
     color='k'
 )
 
-axes[0].set_xlabel('Column water vapor [kg/m$^2$]')
-axes[0].set_ylabel('R$_t$ [W/m$^2$]')
+axes[0].set_xlabel('Column water vapor / kg/m$^2$')
+axes[0].set_ylabel('R$_t$ / W/m$^2$')
 
 sc = axes[1].scatter(
     cut_data(atms['IWP'], mask=mask),
     cut_data(col_h2o, mask=mask),
     s=0.5,
-    c = cut_data(fluxes_3d['allsky_sw_down'].isel(pressure=-1), mask)
+    color='k'
 )
 axes[1].set_xscale('log')
-axes[1].set_xlabel('IWP [kg/m$^2$]')
-axes[1].set_ylabel('Column water vapor [kg/m$^2$]')
+axes[1].set_xlabel('IWP / kg/m$^2$')
+axes[1].set_ylabel('Column water vapor / kg/m$^2$')
 
 for ax in axes:
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
-
-# add colorbar
-cbar = fig.colorbar(sc, ax=axes[1])
-cbar.set_label('SW$_{TOA}$ [W/m$^2$]')
 
 
 # %% linear regression of R_t vs IWP 
@@ -103,6 +99,10 @@ ax.plot(
     color='r'
 )
 ax.set_xscale('log')
+ax.spines['right'].set_visible(False)
+ax.spines['top'].set_visible(False)
+ax.set_xlabel('IWP / kg/m$^2$')
+ax.set_ylabel('R$_t$ / W/m$^2$')
 
 # %% export parameters
 with open('/work/bm1183/m301049/icon_arts_processed/derived_quantities/water_vapor_dependence.pkl', 'wb') as f:
