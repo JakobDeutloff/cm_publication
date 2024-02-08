@@ -123,3 +123,59 @@ def bin_and_average_cre(cre, IWP_bins, lon_bins, atms, modus="ice_only"):
 
 def cut_data(data, mask=True):
     return data.sel(lat=slice(-30, 30)).where(mask)
+
+def define_connected(atms, frac_no_cloud=0.05):
+    """
+    defines for all profiles with ice above liquid whether
+    the high and low clouds are connected (1) or not (0).
+    Profiles where not both cloud types are present are filled with nan. 
+    Profiles masked aout in atm will also be nan.
+
+    Parameters:
+    -----------
+    atms : xarray.Dataset
+        Dataset containing atmospheric profiles, can be masked if needed
+    frac_no_cloud : float
+        Fraction of maximum cloud condensate in column to define no cloud
+
+    Returns:
+    --------
+    connected : xarray.DataArray
+        DataArray containing connectedness for each profile
+    """
+
+    # define liquid and ice cloud condensate
+    liq = atms["LWC"] + atms["rain"]
+    ice = atms["IWC"] + atms["snow"] + atms["graupel"]
+
+    # define ice and liquid content needed for connectedness
+    no_ice_cloud = (ice > (frac_no_cloud * ice.max("pressure"))) * 1
+    no_liq_cloud = (liq > (frac_no_cloud * liq.max("pressure"))) * 1
+    no_cld = no_liq_cloud + no_ice_cloud
+
+
+    # find all profiles with ice above liquid
+    mask_both_clds = (atms['LWP'] > 1e-6) & (atms['IWP'] > 1e-6)
+    n_profiles = int((mask_both_clds * 1).sum().values)
+    lon, lat = np.meshgrid(mask_both_clds.lon, mask_both_clds.lat)
+    lat_valid = lat[mask_both_clds]
+    lon_valid = lon[mask_both_clds]
+
+    # loop over all profiles with ice above liquid and define connectedness
+    connected = xr.DataArray(np.ones(mask_both_clds.shape), coords=mask_both_clds.coords, dims=mask_both_clds.dims)
+    connected = connected.where(mask_both_clds)
+    for i in range(n_profiles):
+        liq_point = liq.sel(lat=lat_valid[i], lon=lon_valid[i])
+        ice_point = ice.sel(lat=lat_valid[i], lon=lon_valid[i])
+        p_top_idx = ice_point.argmax("pressure").values
+        p_bot_idx = liq_point.argmax("pressure").values
+        cld_range = no_cld.sel(lat=lat_valid[i], lon=lon_valid[i]).isel(
+            pressure=slice(p_bot_idx, p_top_idx)
+        )
+        # high and low clouds are not connected if there is a 3-cell deep layer without cloud
+        for j in range(len(cld_range.pressure)):
+            if cld_range.isel(pressure=j).sum() == 0:
+                connected.loc[dict(lat=lat_valid[i], lon=lon_valid[i])] = 0
+                break
+
+    return connected

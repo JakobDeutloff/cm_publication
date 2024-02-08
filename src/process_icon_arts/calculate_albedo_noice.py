@@ -29,7 +29,12 @@ sw_vars["allsky_albedo"] = np.abs(
     fluxes_3d.isel(pressure=-1)["allsky_sw_up"]
     / fluxes_3d.isel(pressure=-1)["allsky_sw_down"]
 )
-sw_vars["high_cloud_albedo"] = calc_hc_albedo(sw_vars["noice_albedo"], sw_vars["allsky_albedo"])
+sw_vars["clearsky_albedo"] = np.abs(
+    fluxes_3d.isel(pressure=-1)['clearsky_sw_up']
+    / fluxes_3d.isel(pressure=-1)['clearsky_sw_down']
+)
+cs_albedo = xr.where(atms['connected'] == 1, sw_vars['clearsky_albedo'], sw_vars['noice_albedo'])
+sw_vars["high_cloud_albedo"] = calc_hc_albedo(cs_albedo, sw_vars["allsky_albedo"])
 
 # %% calculate mean albedos by weighting with the incoming SW radiation in IWP bins
 IWP_bins = np.logspace(-5, 1, num=50)
@@ -46,7 +51,7 @@ for i in range(len(IWP_bins) - 1):
         binned_hc_albedo[i, j] = float(
             (
                 sw_vars["high_cloud_albedo"]
-                .where(IWP_mask & SW_mask & lw_vars['mask_height'] & lw_vars['mask_hc_no_lc'])
+                .where(IWP_mask & SW_mask & lw_vars['mask_height'] & (lw_vars['mask_hc_no_lc'].values | (atms['connected'] == 1).values))
                 .sel(lat=slice(-30, 30))
             )
             .mean()

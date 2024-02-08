@@ -3,10 +3,11 @@ import xarray as xr
 import matplotlib.pyplot as plt
 import numpy as np
 import cartopy.crs as ccrs
+from src.icon_arts_analysis import define_connected
 
 # %% load data from freddis runs
 path_freddi = "/work/bm1183/m301049/icon_arts_processed/"
-run = "fullrange_flux_mid1deg/"
+run = "fullrange_flux_mid1deg_noice/"
 atms = xr.open_dataset(path_freddi + run + "atms.nc")
 fluxes_3d = xr.open_dataset(path_freddi + run + "fluxes_3d.nc")
 aux = xr.open_dataset(path_freddi + run + "aux.nc")
@@ -114,6 +115,9 @@ fluxes_3d["albedo_allsky"] = np.abs(
 fluxes_3d["albedo_clearsky"] = np.abs(
     fluxes_3d["clearsky_sw_up"].isel(pressure=-1) / fluxes_3d["clearsky_sw_down"].isel(pressure=-1)
 )
+
+# %% calculate connectedness
+atms['connected'] = define_connected(atms, frac_no_cloud=0.05)
 
 # %% save results
 atms.to_netcdf(path_freddi + run + "atms_full.nc")

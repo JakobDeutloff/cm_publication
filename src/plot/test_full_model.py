@@ -56,11 +56,12 @@ result = run_model(
     T_hc = cut_data(lw_vars["h_cloud_temperature"], mask),
     LWP = cut_data(atms['LWP'], mask),
     IWP = cut_data(atms['IWP'], mask),
+    connectedness=atms['connected'],
     parameters = parameters,
     const_lc_quantities=const_lc_quantities,
     prescribed_lc_quantities=None
 )
-model_results['all'] = result
+model_results['connected'] = result
 # %% plot model results
 fig, axes = plot_model_output(
     result,
@@ -74,7 +75,7 @@ fig, axes = plot_model_output(
     sw_vars_avg,
     lc_vars,
     cre_average,
-    mode='all'
+    mode='connected'
 )
 per_gridcells = (mask*1).sel(lat=slice(-30, 30)).mean().values * 100
 fig.suptitle(f"All Valid High Clouds ({per_gridcells:.0f}% of gridcells)", fontsize=12)

@@ -111,14 +111,16 @@ mean_lc_vars["interpolated_albedo"] = mean_allsky_albedo_interp
 mean_clearsky_albedo = lc_vars["albedo_clearsky"].sel(lat=slice(-30, 30)).mean().values
 
 # calculate average albedo for LWP > 1e-6
+mask_lwp_bins = LWP_points > 1e-6
+mask_connected = atms["connected"] == 1
+
 number_of_points = np.zeros(len(LWP_points))
 for i in range(len(LWP_bins) - 1):
     LWP_mask = (atms["LWP"] > LWP_bins[i]) & (atms["LWP"] <= LWP_bins[i + 1])
     number_of_points[i] = (
-        cut_data(lc_vars["albedo_allsky"], ~mask_night).where(LWP_mask & ~mask_night).count().values
+        cut_data(lc_vars["albedo_allsky"]).where(LWP_mask & ~mask_night & ~mask_connected).count().values
     )
 
-mask_lwp_bins = LWP_points > 1e-6
 mean_cloud_albedo = np.sum(
     mean_lc_vars["interpolated_albedo"][mask_lwp_bins] * number_of_points[mask_lwp_bins]
 ) / np.sum(number_of_points[mask_lwp_bins][mean_lc_vars["interpolated_albedo"][mask_lwp_bins] > 0])
@@ -199,7 +201,7 @@ result = linregress(x_data, y_data)
 # %% average R_t over LWP bins
 R_t_binned = cut_data(R_t).groupby_bins(cut_data(atms["LWP"]), LWP_bins).mean()
 mean_lc_vars["binned_R_t"] = R_t_binned
-lc_R_t = cut_data(R_t).where(mask_lwp).mean().values
+lc_R_t = cut_data(R_t).where(mask_lwp & ~mask_connected).mean().values
 
 # %% plot R_t vs LWP
 fig, ax = plt.subplots()

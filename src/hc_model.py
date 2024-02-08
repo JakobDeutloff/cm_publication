@@ -30,11 +30,45 @@ def logistic(x, L, x0, k, j):
     """
     return L / (1 + np.exp(-k * (x - x0))) + j
 
-def calc_lc_fraction(LWP, threshold):
-    lc_fraction = (LWP >= threshold) * 1
+def calc_lc_fraction(LWP, threshold, connected):
+    """
+    Calculates the low cloud fraction.
+
+    PARAMETERS:
+    ---------------------------
+    LWP: array-like
+        Liquid water path.
+    threshold: float
+        Threshold value for low cloud fraction.
+    connected: array-like
+        Connectedness data.
+
+    RETURNS:
+    ---------------------------
+    lc_fraction: array-like
+        Low cloud fraction.
+    """
+    lc_fraction = ((LWP >= threshold) & (connected != 1)) * 1
     return lc_fraction
 
 def binning(IWP_bins, data, IWP):
+    """
+    Bins the data based on IWP.
+
+    PARAMETERS:
+    ---------------------------
+    IWP_bins: array-like
+        Bins for IWP.
+    data: array-like
+        Data to be binned.
+    IWP: array-like
+        Corresponding IWP.
+
+    RETURNS:
+    ---------------------------
+    binned_data: array-like
+        Binned data.
+    """
     return data.groupby_bins(IWP, IWP_bins).mean()
 
 
@@ -52,7 +86,7 @@ def calc_hc_albedo(IWP, alpha_hc_params):
     RETURNS:
     ---------------------------
     fitted_vals: array-like
-        high cloud albedo.
+        High cloud albedo.
     """
     fitted_vals = logistic(np.log10(IWP), *alpha_hc_params, 0)
     return fitted_vals
@@ -72,7 +106,7 @@ def calc_hc_emissivity(IWP, em_hc_params):
     RETURNS:
     ---------------------------
     fitted_vals: array-like
-        high cloud emissivity.
+        High cloud emissivity.
     """
     fitted_vals = logistic(np.log10(IWP), *em_hc_params, 0)
     return fitted_vals
@@ -87,20 +121,22 @@ def calc_alpha_t(
     prescribed_lc_quantities,
 ):
     """
-    Calculates the albdedo below the high clouds.
+    Calculates the albedo below the high clouds.
 
     PARAMETERS:
     ---------------------------
     LWP: array-like
         Liquid water path.
     lc_fraction: array-like
-        low cloud fraction.
+        Low cloud fraction.
     albedo_cs: float
         Clearsky albedo.
     alpha_t_params: tuple
         Parameters for the logistic function.
     const_lc_quantities: dict, optional
         Constant values for lc quantities if they should be used instead of logistic function.
+    prescribed_lc_quantities: dict, optional
+        Prescribed values for lc quantities.
 
     RETURNS:
     ---------------------------
@@ -128,14 +164,20 @@ def calc_R_t(
     ---------------------------
     LWP: array-like
         Liquid water path.
+    IWP: array-like
+        Ice water path.
     lc_fraction: array-like
-        low cloud fraction.
+        Low cloud fraction.
     R_t_cs: float
         Clearsky R_t.
     R_t_params: tuple
         Parameters for the linear regression.
+    h20_params: tuple
+        Parameters for the linear regression.
     const_lc_quantities: dict, optional
         Constant values for lc quantities if they should be used instead of linear regression.
+    prescribed_lc_quantities: dict, optional
+        Prescribed values for lc quantities.
 
     RETURNS:
     ---------------------------
@@ -200,9 +242,6 @@ def hc_lw_cre(em_hc, T_h, R_t, sigma):
     return em_hc * ((-1 * sigma * T_h**4) - R_t)
 
 
-# model function
-
-
 def run_model(
     IWP_bins,
     albedo_cs,
@@ -211,6 +250,7 @@ def run_model(
     T_hc,
     LWP,
     IWP,
+    connectedness,
     parameters,
     const_lc_quantities=None,
     prescribed_lc_quantities=None,
@@ -218,30 +258,41 @@ def run_model(
     """
     Runs the HC Model with given input data and parameters.
 
-    INPUT:
+    PARAMETERS:
     ---------------------------
     IWP_bins: array-like
         Bins for IWP.
-    fluxes_3d: xarray.Dataset
-        3D fluxes data.
-    atms: xarray.Dataset
-        Atmosphere data.
-    lw_vars: xarray.Dataset
-        Longwave variables.
+    albedo_cs: float
+        Clearsky albedo.
+    R_t_cs: float
+        Clearsky R_t.
+    SW_in: float
+        Daily average SW radiation at TOA.
+    T_hc: array-like
+        High cloud temperature.
+    LWP: array-like
+        Liquid water path.
+    IWP: array-like
+        Ice water path.
+    connectedness: array-like
+        Connectedness data.
     parameters: dict
         Parameters for the model.
     const_lc_quantities: dict, optional
         Constant values for lc quantities.
+    prescribed_lc_quantities: dict, optional
+        Prescribed values for lc quantities.
 
     RETURNS:
     ---------------------------
     results: pd.DataFrame
-        Results of the model."""
+        Results of the model.
+    """
 
     IWP_points = (IWP_bins[1:] + IWP_bins[:-1]) / 2
 
     # calculate lc fraction
-    lc_fraction = calc_lc_fraction(LWP, threshold=parameters["threshold_lc_fraction"])
+    lc_fraction = calc_lc_fraction(LWP, threshold=parameters["threshold_lc_fraction"], connected=connectedness)
 
     # bin the input data
     T_hc_binned = binning(IWP_bins, T_hc, IWP)

@@ -409,8 +409,18 @@ def plot_model_output(
         axes[3, 1].plot(
             cre_average["IWP"], cre_average["ice_over_lc_net"], color="k", linestyle="--"
         )
+    elif mode == 'connected':
+        axes[3, 1].plot(
+            cre_average["IWP"], cre_average["connected_sw"], color="blue", linestyle="--"
+        )
+        axes[3, 1].plot(
+            cre_average["IWP"], cre_average["connected_lw"], color="red", linestyle="--"
+        )
+        axes[3, 1].plot(
+            cre_average["IWP"], cre_average["connected_net"], color="k", linestyle="--"
+        )
     else:
-        raise ValueError('mode must be one of "all", "ice_only", "ice_over_lc"')
+        raise ValueError('mode must be one of "all", "ice_only", "ice_over_lc", "connected"')
 
     axes[3, 1].set_ylabel("CRE / W m${^-2}$")
     axes[3, 1].legend()
