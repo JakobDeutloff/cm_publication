@@ -80,7 +80,7 @@ fig, axes = plot_model_output(
 per_gridcells = (mask*1).sel(lat=slice(-30, 30)).mean().values * 100
 fig.suptitle(f"All Valid High Clouds ({per_gridcells:.0f}% of gridcells)", fontsize=12)
 fig.tight_layout()
-fig.savefig("plots/model_tests/8_cli_all.png", dpi=300)
+fig.savefig("plots/model_tests/8_cli_all_connected_rain.png", dpi=300)
 
  # %% run model for all profiles with cloud tops above 350 hPa and no low clouds below the high clouds 
 mask = lw_vars["mask_height"] & lw_vars['mask_hc_no_lc']

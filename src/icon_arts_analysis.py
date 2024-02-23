@@ -124,7 +124,12 @@ def bin_and_average_cre(cre, IWP_bins, lon_bins, atms, modus="ice_only"):
 def cut_data(data, mask=True):
     return data.sel(lat=slice(-30, 30)).where(mask)
 
-def define_connected(atms, frac_no_cloud=0.05):
+def cut_data_mixed(data_cs, data_lc, mask, connected):
+    # returns lc data fro not connnected profiles and cs data for connected profiles at mask
+    data = xr.where(connected == 0 & mask, x=data_lc.where(mask), y=data_cs.where(mask)).sel(lat=slice(-30, 30))
+    return data
+
+def define_connected(atms, frac_no_cloud=0.05, rain=True):
     """
     defines for all profiles with ice above liquid whether
     the high and low clouds are connected (1) or not (0).
@@ -145,7 +150,11 @@ def define_connected(atms, frac_no_cloud=0.05):
     """
 
     # define liquid and ice cloud condensate
-    liq = atms["LWC"] + atms["rain"]
+    if rain:
+        liq = atms["LWC"] + atms["rain"]
+    else:
+        liq = atms["LWC"]
+        
     ice = atms["IWC"] + atms["snow"] + atms["graupel"]
 
     # define ice and liquid content needed for connectedness

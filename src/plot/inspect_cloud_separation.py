@@ -15,11 +15,8 @@ atms, fluxes_3d, fluxes_3d_noice = load_atms_and_fluxes()
 cre_binned, cre_interpolated, cre_average = load_cre()
 lw_vars, sw_vars, lc_vars = load_derived_vars()
 
-# %%
-
-# select ice clouds with low clouds below
-mask = (atms["IWP"] > 1e-6) & (atms["LWP"] > 1e-6)
-
+# %% mask 
+mask = lw_vars["mask_height"] & (atms['IWP'] > 1e-6) & (atms['LWP'] > 1e-6)
 # bin data
 iwp_bins = np.logspace(-5, 1, 7)
 
@@ -28,15 +25,8 @@ liq_cld_cond = atms["LWC"] + atms["rain"]
 ice_cld_cond = atms["IWC"] + atms["snow"] + atms["graupel"]
 cld_cond = liq_cld_cond + ice_cld_cond
 
-# %% define conetctedness
-frac_no_cloud = 0.05  # fraction of maximum cloud condensate in colum to define no cloud
-no_ice_cloud = (ice_cld_cond > (frac_no_cloud * ice_cld_cond.max("pressure"))) * 1
-no_liq_cloud = (liq_cld_cond > (frac_no_cloud * liq_cld_cond.max("pressure"))) * 1
-no_cld = no_liq_cloud + no_ice_cloud
-
-
 # %% plot mean and std of cld condensate in all iwp bins
-def plot_condensate(ax, min, max):
+def plot_condensate(ax, min, max, mask):
     ax2 = ax.twiny()
     mean_liq = (
         liq_cld_cond.where((atms["IWP"] >= min) & (atms["IWP"] < max) & mask)
@@ -99,10 +89,10 @@ def plot_condensate(ax, min, max):
 
 
 
-def plot_connected(ax, min, max):
+def plot_connected(ax, min, max, mask):
 
-    mask = (atms['IWP'] > min) & (atms['IWP'] < max)
-    connected = define_connected(atms.where(mask).sel(lat=slice(-30, 30)))
+    mask_selection =  mask & (atms['IWP'] > min) & (atms['IWP'] < max)
+    connected = define_connected(atms.where(mask_selection).sel(lat=slice(-30, 30)), rain=False)
     n_profiles = (~np.isnan(connected)*1).sum().values
     connected_profiles = connected.sum().values
 
@@ -124,8 +114,8 @@ def plot_connected(ax, min, max):
 
 fig, axes = plt.subplots(2, 6, figsize=(20, 12), sharey="row")
 for i in range(6):
-    ax2 = plot_condensate(axes[0, i], iwp_bins[i], iwp_bins[i + 1])
-    plot_connected(axes[1, i], iwp_bins[i], iwp_bins[i + 1])
+    ax2 = plot_condensate(axes[0, i], iwp_bins[i], iwp_bins[i + 1], mask)
+    plot_connected(axes[1, i], iwp_bins[i], iwp_bins[i + 1], mask)
 
 axes[0, 0].invert_yaxis()
 axes[0, 0].set_ylabel("Pressure [hPa]")
@@ -135,6 +125,63 @@ fig.legend(
     handles + handles2, labels + labels2, bbox_to_anchor=(0.5, 0.3), loc="lower center", ncols=4
 )
 fig.savefig("plots/inspect_cloud_separation.png", dpi=300, bbox_inches="tight")
+
+
+# %% check the profiles at high IWP that are only connected if rain is included 
+
+def plot_n_profiles(ax, connected):
+    n_profiles = int((~np.isnan(connected)*1).sum())
+    ax.text(0.05, 0.90, f"Number of Profiles: {n_profiles:.0f}", transform=ax.transAxes)
+
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_visible(False)
+    ax.spines["bottom"].set_visible(False)
+    ax.set_yticks([])
+    ax.set_xticks([])
+    
+
+
+connected_rain = define_connected(atms.where(mask & (atms['IWP'] > 1) & (atms['IWP'] <= 10)).sel(lat=slice(-30, 30)), rain=True)
+n_profiles_rain = (~np.isnan(connected_rain)*1).sum().values
+connected_profiles_rain = connected_rain.sum().values
+
+connected_no_rain = define_connected(atms.where(mask & (atms['IWP'] > 1) & (atms['IWP'] <= 10)).sel(lat=slice(-30, 30)), rain=False)
+n_profiles_no_rain = (~np.isnan(connected_no_rain)*1).sum().values
+connected_profiles_no_rain = connected_no_rain.sum().values
+
+fig, axes = plt.subplots(2, 3, figsize=(10, 10), sharey='row', sharex='row')
+
+plot_condensate(axes[0, 0], 1, 10, mask=(mask & (connected_rain == 1)))
+plot_condensate(axes[0, 1], 1, 10, mask=(mask & (connected_rain == 1) & (connected_no_rain == 1)))
+plot_condensate(axes[0, 2], 1, 10, mask=(mask & (connected_rain == 1) & (connected_no_rain == 0)))
+
+
+for ax in axes[0, :]:
+    ax.set_ylabel("Pressure [hPa]")
+    ax.spines["right"].set_visible(False)
+    ax.spines["top"].set_visible(False)
+
+axes[0, 0].invert_yaxis()
+axes[0, 0].set_title("With rain")
+axes[0, 1].set_title("With and without rain")
+axes[0, 2].set_title("With rain, not without")
+
+connect = np.ones(connected_rain.shape) * np.nan
+connect[(connected_rain == 1)] = 1
+plot_n_profiles(axes[1, 0], connect)
+connect = np.ones(connected_rain.shape) * np.nan
+connect[(connected_rain == 1) & (connected_no_rain == 1)] = 1
+plot_n_profiles(axes[1, 1], connect)
+connect = np.ones(connected_rain.shape) * np.nan
+connect[(connected_rain == 1) & (connected_no_rain == 0)] = 1
+plot_n_profiles(axes[1, 2], connect)
+
+handles, labels = axes[0, 0].get_legend_handles_labels()
+handles2, labels2 = ax2.get_legend_handles_labels()
+fig.legend(
+    handles + handles2, labels + labels2, bbox_to_anchor=(0.5, 0.3), loc="lower center", ncols=4
+)
 
 
 # %%

@@ -1,12 +1,10 @@
 import matplotlib.pyplot as plt
-from src.icon_arts_analysis import cut_data
+from src.icon_arts_analysis import cut_data, cut_data_mixed
 
 
 def plot_profiles(lat, lon, atms, fluxes_3d):
     fig, axes = plt.subplots(2, 5, figsize=(12, 10), sharey="row")
-    data = atms.sel(lat=lat, lon=lon, method="nearest").sel(
-        pressure=slice(100000, 5000)
-    )
+    data = atms.sel(lat=lat, lon=lon, method="nearest").sel(pressure=slice(100000, 5000))
     fluxes = fluxes_3d.sel(lat=lat, lon=lon, method="nearest").sel(
         pressure=slice(100000, 5000), p_half=slice(100000, 5000)
     )
@@ -51,9 +49,7 @@ def plot_profiles(lat, lon, atms, fluxes_3d):
 
     # plot LW fluxes down
     axes[1, 1].plot(fluxes["allsky_lw_down"], height, label="allsky", color="k")
-    axes[1, 1].plot(
-        fluxes["clearsky_lw_down"], height, label="clearsky", color="k", linestyle="--"
-    )
+    axes[1, 1].plot(fluxes["clearsky_lw_down"], height, label="clearsky", color="k", linestyle="--")
     axes[1, 1].set_xlabel("LW Down / W m$^{-2}$")
     axes[1, 1].legend()
 
@@ -71,9 +67,7 @@ def plot_profiles(lat, lon, atms, fluxes_3d):
 
     # plot SW fluxes down
     axes[1, 3].plot(fluxes["allsky_sw_down"], height, label="allsky", color="k")
-    axes[1, 3].plot(
-        fluxes["clearsky_sw_down"], height, label="clearsky", color="k", linestyle="--"
-    )
+    axes[1, 3].plot(fluxes["clearsky_sw_down"], height, label="clearsky", color="k", linestyle="--")
     axes[1, 3].set_xlabel("SW Down / W m$^{-2}$")
     axes[1, 3].legend()
 
@@ -92,9 +86,7 @@ def plot_profiles(lat, lon, atms, fluxes_3d):
 
     # plot sw heating rates
     axes[0, 3].plot(fluxes["allsky_hr_sw"], height, label="allsky", color="k")
-    axes[0, 3].plot(
-        fluxes["clearsky_hr_sw"], height, label="clearsky", color="k", linestyle="--"
-    )
+    axes[0, 3].plot(fluxes["clearsky_hr_sw"], height, label="clearsky", color="k", linestyle="--")
     axes[0, 3].set_xlabel("SW HR / K d$^{-1}$")
     axes[0, 3].axvline(0, linestyle=":", color="k")
     axes[0, 3].legend()
@@ -118,9 +110,7 @@ def plot_profiles(lat, lon, atms, fluxes_3d):
 
 def plot_profiles_noice(lat, lon, atms, fluxes_3d, fluxes_3d_noice):
     fig, axes = plt.subplots(2, 5, figsize=(12, 10), sharey="row")
-    data = atms.sel(lat=lat, lon=lon, method="nearest").sel(
-        pressure=slice(100000, 5000)
-    )
+    data = atms.sel(lat=lat, lon=lon, method="nearest").sel(pressure=slice(100000, 5000))
     fluxes = fluxes_3d.sel(lat=lat, lon=lon, method="nearest").sel(
         pressure=slice(100000, 5000), p_half=slice(100000, 5000)
     )
@@ -299,7 +289,7 @@ def plot_model_output(
     sw_vars_avg,
     lc_vars,
     cre_average,
-    mode = 'all'
+    mode="all",
 ):
     fig, axes = plt.subplots(4, 2, figsize=(10, 10), sharex="col")
 
@@ -314,9 +304,7 @@ def plot_model_output(
     axes[0, 0].set_ylabel(r"$\mathrm{T_{hc}}$ / K")
 
     # LWP
-    axes[0, 1].scatter(
-        cut_data(atms["IWP"], mask), cut_data(atms["LWP"], mask), s=0.1, color="k"
-    )
+    axes[0, 1].scatter(cut_data(atms["IWP"], mask), cut_data(atms["LWP"], mask), s=0.1, color="k")
     axes[0, 1].plot(result["LWP"], color="magenta")
     axes[0, 1].set_ylim(1e-5, 1e1)
     axes[0, 1].set_yscale("log")
@@ -327,25 +315,35 @@ def plot_model_output(
     axes[1, 0].set_ylabel(r"$f$")
 
     # alpha_t
+    alpha_t = cut_data_mixed(
+        fluxes_3d_noice["albedo_clearsky"],
+        fluxes_3d_noice["albedo_allsky"],
+        mask,
+        atms["connected"],
+    )
     axes[1, 1].scatter(
         cut_data(atms["IWP"], mask),
-        cut_data(fluxes_3d_noice["albedo_allsky"], mask),
+        alpha_t,
         s=0.1,
         color="k",
     )
-    cut_data(fluxes_3d_noice["albedo_allsky"], mask).groupby_bins(
-        cut_data(atms["IWP"], mask), bins=IWP_bins
-    ).mean().plot(ax=axes[1, 1], color="limegreen", label="Average")
+    alpha_t.groupby_bins(cut_data(atms["IWP"], mask), bins=IWP_bins).mean().plot(
+        ax=axes[1, 1], color="limegreen", label="Average"
+    )
     axes[1, 1].plot(result["alpha_t"], color="magenta", label="Model")
     axes[1, 1].set_ylabel(r"$\alpha_t$")
 
     # R_t
-    axes[2, 0].scatter(
-        cut_data(atms["IWP"], mask), cut_data(lc_vars["R_t"], mask), s=0.1, color="k"
+    R_t = cut_data_mixed(
+        fluxes_3d_noice["clearsky_lw_up"].isel(pressure=-1),
+        fluxes_3d_noice["allsky_lw_up"].isel(pressure=-1),
+        mask,
+        atms["connected"],
     )
-    cut_data(lc_vars["R_t"], mask).groupby_bins(
-        cut_data(atms["IWP"],mask), bins=IWP_bins
-    ).mean().plot(ax=axes[2, 0], color="limegreen", label="Average")
+    axes[2, 0].scatter(cut_data(atms["IWP"], mask), R_t, s=0.1, color="k")
+    R_t.groupby_bins(cut_data(atms["IWP"], mask), bins=IWP_bins).mean().plot(
+        ax=axes[2, 0], color="limegreen", label="Average"
+    )
     axes[2, 0].plot(result["R_t"], color="magenta", label="Model")
     axes[2, 0].set_ylabel(r"$\mathrm{R_t}$ / $\mathrm{W ~ m^{-2}}$")
 
@@ -369,7 +367,7 @@ def plot_model_output(
         label="data",
     )
     cut_data(lw_vars["high_cloud_emissivity"], mask).groupby_bins(
-        cut_data(atms["IWP"],mask), bins=IWP_bins
+        cut_data(atms["IWP"], mask), bins=IWP_bins
     ).median().plot(ax=axes[3, 0], color="limegreen", label="Average")
     axes[3, 0].plot(result["em_hc"], color="magenta", label="Model")
     axes[3, 0].set_ylabel(r"$\epsilon$")
@@ -379,27 +377,17 @@ def plot_model_output(
     axes[3, 1].plot(result["SW_cre"], color="blue", label="SW")
     axes[3, 1].plot(result["LW_cre"], color="red", label="LW")
     axes[3, 1].plot(result["SW_cre"] + result["LW_cre"], color="k", label="Net")
-    if mode == 'all':
-        axes[3, 1].plot(
-            cre_average["IWP"], cre_average["all_sw"], color="blue", linestyle="--"
-        )
-        axes[3, 1].plot(
-            cre_average["IWP"], cre_average["all_lw"], color="red", linestyle="--"
-        )
-        axes[3, 1].plot(
-            cre_average["IWP"], cre_average["all_net"], color="k", linestyle="--"
-        )
-    elif mode == 'ice_only':
+    if mode == "all":
+        axes[3, 1].plot(cre_average["IWP"], cre_average["all_sw"], color="blue", linestyle="--")
+        axes[3, 1].plot(cre_average["IWP"], cre_average["all_lw"], color="red", linestyle="--")
+        axes[3, 1].plot(cre_average["IWP"], cre_average["all_net"], color="k", linestyle="--")
+    elif mode == "ice_only":
         axes[3, 1].plot(
             cre_average["IWP"], cre_average["ice_only_sw"], color="blue", linestyle="--"
         )
-        axes[3, 1].plot(
-            cre_average["IWP"], cre_average["ice_only_lw"], color="red", linestyle="--"
-        )
-        axes[3, 1].plot(
-            cre_average["IWP"], cre_average["ice_only_net"], color="k", linestyle="--"
-        )
-    elif mode == 'ice_over_lc':
+        axes[3, 1].plot(cre_average["IWP"], cre_average["ice_only_lw"], color="red", linestyle="--")
+        axes[3, 1].plot(cre_average["IWP"], cre_average["ice_only_net"], color="k", linestyle="--")
+    elif mode == "ice_over_lc":
         axes[3, 1].plot(
             cre_average["IWP"], cre_average["ice_over_lc_sw"], color="blue", linestyle="--"
         )
@@ -409,16 +397,14 @@ def plot_model_output(
         axes[3, 1].plot(
             cre_average["IWP"], cre_average["ice_over_lc_net"], color="k", linestyle="--"
         )
-    elif mode == 'connected':
+    elif mode == "connected":
         axes[3, 1].plot(
             cre_average["IWP"], cre_average["connected_sw"], color="blue", linestyle="--"
         )
         axes[3, 1].plot(
             cre_average["IWP"], cre_average["connected_lw"], color="red", linestyle="--"
         )
-        axes[3, 1].plot(
-            cre_average["IWP"], cre_average["connected_net"], color="k", linestyle="--"
-        )
+        axes[3, 1].plot(cre_average["IWP"], cre_average["connected_net"], color="k", linestyle="--")
     else:
         raise ValueError('mode must be one of "all", "ice_only", "ice_over_lc", "connected"')
 
