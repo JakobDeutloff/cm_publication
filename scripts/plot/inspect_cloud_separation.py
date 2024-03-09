@@ -7,13 +7,13 @@ low clouds as liquid and ice or whether they are part of the same cloud at high 
 import numpy as np
 import matplotlib.pyplot as plt
 import xarray as xr
-from src.read_data import load_atms_and_fluxes, load_cre, load_derived_vars
+from src.read_data import load_atms_and_fluxes, load_derived_vars
 from src.icon_arts_analysis import define_connected
 
 # %% load data
 atms, fluxes_3d, fluxes_3d_noice = load_atms_and_fluxes()
-cre_binned, cre_interpolated, cre_average = load_cre()
 lw_vars, sw_vars, lc_vars = load_derived_vars()
+
 
 # %% mask 
 mask = lw_vars["mask_height"] & (atms['IWP'] > 1e-6) & (atms['LWP'] > 1e-6)

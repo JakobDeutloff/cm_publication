@@ -142,3 +142,17 @@ def load_average_lc_parameters():
         average_lc_params = pickle.load(f)
 
     return average_lc_params
+
+def load_binned_atms():
+    """
+    Load the binned atmospheric variables.
+
+    Returns
+    -------
+    atms_binned : xarray.Dataset
+        Binned atmospheric variables.
+    """
+
+    path = "/work/bm1183/m301049/nextgems_profiles/"
+    atms_binned = xr.open_dataset(path + "profiles_processed_2.nc")
+    return atms_binned
