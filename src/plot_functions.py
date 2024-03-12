@@ -621,13 +621,16 @@ def plot_connectedness(sample, mask, liq_cld_cond, ice_cld_cond, mode="icon"):
     - axes: The matplotlib axes object.
     """
 
-    fig, axes = plt.subplots(2, 6, figsize=(20, 12), sharey="row")
+    fig, axes = plt.subplots(2, 6, figsize=(22, 12), sharey="row")
     iwp_bins = np.logspace(-5, 1, 7)
+    formatter = ScalarFormatter(useMathText=True)
+    formatter.set_powerlimits((-1, 2))
 
     for i in range(6):
         ax2 = plot_condensate(
             sample, axes[0, i], iwp_bins[i], iwp_bins[i + 1], mask, liq_cld_cond, ice_cld_cond, mode
         )
+        ax2.xaxis.set_major_formatter(formatter)
         plot_num_connected(sample, axes[1, i], iwp_bins[i], iwp_bins[i + 1], mask)
 
     handles, labels = axes[0, 0].get_legend_handles_labels()
@@ -643,8 +646,6 @@ def plot_connectedness(sample, mask, liq_cld_cond, ice_cld_cond, mode="icon"):
     
     # Set the x-axis formatter
     for ax in axes.flatten():
-        formatter = ScalarFormatter(useMathText=True)
-        formatter.set_powerlimits((-1, 2))
         ax.xaxis.set_major_formatter(formatter)
 
     return fig, axes
