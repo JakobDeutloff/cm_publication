@@ -3,7 +3,7 @@ Script to derive variables for the binned atmospheric data and save them in a ne
 """
 # %% import
 import xarray as xr
-from src.variable_definitions import calculate_lc_fraction, calculate_IWC_cumsum, calculate_h_cloud_temperature
+from calc_variables import calculate_lc_fraction, calculate_IWC_cumsum, calculate_h_cloud_temperature
 
 # %% load data
 path = "/work/bm1183/m301049/nextgems_profiles/"

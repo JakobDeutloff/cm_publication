@@ -2,7 +2,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import xarray as xr
-from src.icon_arts_analysis import define_connected
+from calc_variables import calc_connected
 
 # %% load data
 path = "/work/bm1183/m301049/nextgems_profiles/"
@@ -72,7 +72,7 @@ def plot_condensate(ax, min, max, mask):
 def plot_connected(ax, min, max, mask):
 
     mask_selection = mask & (atms["IWP"] > min) & (atms["IWP"] < max)
-    connected = define_connected(atms.where(mask_selection), rain=False)
+    connected = calc_connected(atms.where(mask_selection), rain=False)
     n_profiles = (~np.isnan(connected) * 1).sum().values
     connected_profiles = connected.sum().values
 
@@ -104,6 +104,6 @@ handles2, labels2 = ax2.get_legend_handles_labels()
 fig.legend(
     handles + handles2, labels + labels2, bbox_to_anchor=(0.5, 0.3), loc="lower center", ncols=4
 )
-#fig.savefig("plots/inspect_cloud_separation.png", dpi=300, bbox_inches="tight")
+# fig.savefig("plots/inspect_cloud_separation.png", dpi=300, bbox_inches="tight")
 
 # %%

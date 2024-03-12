@@ -30,7 +30,8 @@ def logistic(x, L, x0, k, j):
     """
     return L / (1 + np.exp(-k * (x - x0))) + j
 
-def calc_lc_fraction(LWP, threshold, connected):
+
+def calc_lc_fraction(LWP, connected, threshold=1e-4):
     """
     Calculates the low cloud fraction.
 
@@ -50,6 +51,7 @@ def calc_lc_fraction(LWP, threshold, connected):
     """
     lc_fraction = ((LWP >= threshold) & (connected != 1)) * 1
     return lc_fraction
+
 
 def binning(IWP_bins, data, IWP):
     """
@@ -155,7 +157,14 @@ def calc_alpha_t(
 
 
 def calc_R_t(
-    LWP, IWP, lc_fraction, R_t_cs, R_t_params, h20_params, const_lc_quantities, prescribed_lc_quantities
+    LWP,
+    IWP,
+    lc_fraction,
+    R_t_cs,
+    R_t_params,
+    h20_params,
+    const_lc_quantities,
+    prescribed_lc_quantities,
 ):
     """
     Calculates the LW radiation from below the high clouds.
@@ -292,13 +301,11 @@ def run_model(
     IWP_points = (IWP_bins[1:] + IWP_bins[:-1]) / 2
 
     # calculate lc fraction
-    lc_fraction = calc_lc_fraction(LWP, threshold=parameters["threshold_lc_fraction"], connected=connectedness)
+    lc_fraction = calc_lc_fraction(LWP, connected=connectedness)
 
     # bin the input data
     T_hc_binned = binning(IWP_bins, T_hc, IWP)
-    LWP_binned = binning(
-        IWP_bins, LWP.where(LWP > parameters["threshold_lc_fraction"]), IWP
-    )
+    LWP_binned = binning(IWP_bins, LWP.where(LWP > 1e-4), IWP)
     lc_fraction_binned = binning(IWP_bins, lc_fraction, IWP)
 
     # calculate radiative properties below high clouds

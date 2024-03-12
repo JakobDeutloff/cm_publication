@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import xarray as xr
 from src.read_data import load_atms_and_fluxes, load_derived_vars
-from src.icon_arts_analysis import cut_data
+from calc_variables import cut_data
 from scipy.stats import linregress
 import pickle 
 

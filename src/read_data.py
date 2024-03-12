@@ -21,7 +21,7 @@ def load_atms_and_fluxes():
     path = "/work/bm1183/m301049/icon_arts_processed/"
     run = "fullrange_flux_mid1deg_noice/"
     fluxes_3d_noice = xr.open_dataset(path + run + "fluxes_3d_full.nc")
-    atms = xr.open_dataset(path + run + "atms_full.nc")
+    atms = xr.open_dataset("/work/bm1183/m301049/nextgems_profiles/monsoon/atms_full.nc")
     run = "fullrange_flux_mid1deg/"
     fluxes_3d = xr.open_dataset(path + run + "fluxes_3d_full.nc")
 

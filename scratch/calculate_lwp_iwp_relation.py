@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from src.read_data import load_atms_and_fluxes
 from src.plot_functions import scatterplot
 from scipy.stats import linregress
-from src.icon_arts_analysis import cut_data
+from calc_variables import cut_data
 # %% load data
 atms, fluxes_3d, fluxes_3d_noice = load_atms_and_fluxes()
 lw_vars = xr.open_dataset("/work/bm1183/m301049/icon_arts_processed/derived_quantities/lw_vars.nc")

@@ -1,7 +1,5 @@
 # %% import
 import numpy as np
-import xarray as xr
-import matplotlib.pyplot as plt
 from src.hc_model import run_model
 from src.read_data import (
     load_atms_and_fluxes,
@@ -12,7 +10,7 @@ from src.read_data import (
     load_average_lc_parameters,
 )
 from src.plot_functions import plot_model_output
-from src.icon_arts_analysis import cut_data
+from calc_variables import cut_data
 import pickle
 
 

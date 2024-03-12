@@ -8,15 +8,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 import xarray as xr
 from src.read_data import load_atms_and_fluxes, load_derived_vars
-from src.icon_arts_analysis import define_connected
+from calc_variables import calc_connected
 
 # %% load data
 atms, fluxes_3d, fluxes_3d_noice = load_atms_and_fluxes()
 lw_vars, sw_vars, lc_vars = load_derived_vars()
 
 
-# %% mask 
-mask = lw_vars["mask_height"] & (atms['IWP'] > 1e-6) & (atms['LWP'] > 1e-6)
+# %% mask
+mask = lw_vars["mask_height"] & (atms["IWP"] > 1e-6) & (atms["LWP"] > 1e-6)
 # bin data
 iwp_bins = np.logspace(-5, 1, 7)
 
@@ -24,6 +24,7 @@ iwp_bins = np.logspace(-5, 1, 7)
 liq_cld_cond = atms["LWC"] + atms["rain"]
 ice_cld_cond = atms["IWC"] + atms["snow"] + atms["graupel"]
 cld_cond = liq_cld_cond + ice_cld_cond
+
 
 # %% plot mean and std of cld condensate in all iwp bins
 def plot_condensate(ax, min, max, mask):
@@ -86,14 +87,11 @@ def plot_condensate(ax, min, max, mask):
     return ax2
 
 
-
-
-
 def plot_connected(ax, min, max, mask):
 
-    mask_selection =  mask & (atms['IWP'] > min) & (atms['IWP'] < max)
-    connected = define_connected(atms.where(mask_selection).sel(lat=slice(-30, 30)), rain=False)
-    n_profiles = (~np.isnan(connected)*1).sum().values
+    mask_selection = mask & (atms["IWP"] > min) & (atms["IWP"] < max)
+    connected = calc_connected(atms.where(mask_selection).sel(lat=slice(-30, 30)), rain=False)
+    n_profiles = (~np.isnan(connected) * 1).sum().values
     connected_profiles = connected.sum().values
 
     ax.text(0.05, 0.90, f"{min:.0e} kg/kg - {max:.0e} kg/kg", transform=ax.transAxes)
@@ -127,10 +125,11 @@ fig.legend(
 fig.savefig("plots/inspect_cloud_separation.png", dpi=300, bbox_inches="tight")
 
 
-# %% check the profiles at high IWP that are only connected if rain is included 
+# %% check the profiles at high IWP that are only connected if rain is included
+
 
 def plot_n_profiles(ax, connected):
-    n_profiles = int((~np.isnan(connected)*1).sum())
+    n_profiles = int((~np.isnan(connected) * 1).sum())
     ax.text(0.05, 0.90, f"Number of Profiles: {n_profiles:.0f}", transform=ax.transAxes)
 
     ax.spines["top"].set_visible(False)
@@ -139,18 +138,21 @@ def plot_n_profiles(ax, connected):
     ax.spines["bottom"].set_visible(False)
     ax.set_yticks([])
     ax.set_xticks([])
-    
 
 
-connected_rain = define_connected(atms.where(mask & (atms['IWP'] > 1) & (atms['IWP'] <= 10)).sel(lat=slice(-30, 30)), rain=True)
-n_profiles_rain = (~np.isnan(connected_rain)*1).sum().values
+connected_rain = calc_connected(
+    atms.where(mask & (atms["IWP"] > 1) & (atms["IWP"] <= 10)).sel(lat=slice(-30, 30)), rain=True
+)
+n_profiles_rain = (~np.isnan(connected_rain) * 1).sum().values
 connected_profiles_rain = connected_rain.sum().values
 
-connected_no_rain = define_connected(atms.where(mask & (atms['IWP'] > 1) & (atms['IWP'] <= 10)).sel(lat=slice(-30, 30)), rain=False)
-n_profiles_no_rain = (~np.isnan(connected_no_rain)*1).sum().values
+connected_no_rain = calc_connected(
+    atms.where(mask & (atms["IWP"] > 1) & (atms["IWP"] <= 10)).sel(lat=slice(-30, 30)), rain=False
+)
+n_profiles_no_rain = (~np.isnan(connected_no_rain) * 1).sum().values
 connected_profiles_no_rain = connected_no_rain.sum().values
 
-fig, axes = plt.subplots(2, 3, figsize=(10, 10), sharey='row', sharex='row')
+fig, axes = plt.subplots(2, 3, figsize=(10, 10), sharey="row", sharex="row")
 
 plot_condensate(axes[0, 0], 1, 10, mask=(mask & (connected_rain == 1)))
 plot_condensate(axes[0, 1], 1, 10, mask=(mask & (connected_rain == 1) & (connected_no_rain == 1)))

@@ -3,7 +3,7 @@ import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
-from src.icon_arts_analysis import calc_cre, bin_and_average_cre
+from calc_variables import calc_cre, bin_and_average_cre
 
 # %% load high res and low res data
 path = "/work/bm1183/m301049/icon_arts_processed/"

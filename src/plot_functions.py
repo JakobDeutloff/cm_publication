@@ -1,5 +1,9 @@
 import matplotlib.pyplot as plt
-from src.icon_arts_analysis import cut_data, cut_data_mixed
+from src.calc_variables import cut_data, cut_data_mixed
+from src.helper_functions import hor_mean
+import xarray as xr
+import numpy as np
+from matplotlib.ticker import ScalarFormatter
 
 
 def plot_profiles(lat, lon, atms, fluxes_3d):
@@ -277,17 +281,14 @@ def scatterplot(
     return fig, ax
 
 
-def plot_model_output(
+def plot_model_output_arts(
     result,
     IWP_bins,
     mask,
     atms,
     fluxes_3d_noice,
     lw_vars,
-    lw_vars_avg,
     sw_vars,
-    sw_vars_avg,
-    lc_vars,
     cre_average,
     mode="all",
 ):
@@ -422,5 +423,271 @@ def plot_model_output(
     axes[3, 1].set_xlabel("IWP / kg m$^{-2}$")
     handles, labels = axes[3, 0].get_legend_handles_labels()
     fig.legend(handles, labels, loc="lower center", ncol=3)
+
+    return fig, axes
+
+
+def plot_model_output_icon(
+    result,
+    IWP_bins,
+    sample,
+):
+    fig, axes = plt.subplots(4, 2, figsize=(10, 10), sharex="col")
+    IWP_points = (IWP_bins[1:] + IWP_bins[:-1]) / 2
+
+    # hc temperature
+    axes[0, 0].scatter(
+        sample["IWP"],
+        sample["hc_temperature"],
+        s=0.01,
+        color="k",
+    )
+    axes[0, 0].plot(result["T_hc"], color="magenta")
+    axes[0, 0].set_ylabel(r"$\mathrm{T_{hc}}$ / K")
+
+    # lc fraction
+    binned_lc_frac = ((sample["LWP"] > 1e-4) * 1).groupby_bins(sample["IWP"], bins=IWP_bins).mean()
+    axes[0, 1].plot(result["lc_fraction"], color="magenta", label="Unconnected LCs")
+    axes[0, 1].plot(IWP_points, binned_lc_frac, color="limegreen", label="All LCs")
+    axes[0, 1].set_ylabel(r"$f$")
+    axes[0, 1].legend()
+
+    # alpha_t
+    axes[1, 1].plot(result["alpha_t"], color="magenta", label="Model")
+    axes[1, 1].set_ylabel(r"$\alpha_t$")
+
+    # R_t
+    axes[2, 0].plot(result["R_t"], color="magenta", label="Model")
+    axes[2, 0].set_ylabel(r"$\mathrm{R_t}$ / $\mathrm{W ~ m^{-2}}$")
+
+    # hc albedo
+    axes[2, 1].plot(result["alpha_hc"], color="magenta", label="Model")
+    axes[2, 1].set_ylabel(r"$\alpha$")
+    axes[2, 1].set_ylim(0, 1)
+
+    # hc emissivity
+    axes[3, 0].plot(result["em_hc"], color="magenta", label="Model")
+    axes[3, 0].set_ylabel(r"$\epsilon$")
+    axes[3, 0].set_ylim(0, 1.3)
+
+    # CRE
+    axes[3, 1].plot(result["SW_cre"], color="blue", label="SW")
+    axes[3, 1].plot(result["LW_cre"], color="red", label="LW")
+    axes[3, 1].plot(result["SW_cre"] + result["LW_cre"], color="k", label="Net")
+    axes[3, 1].grid()
+
+    # Plot setup
+    axes[3, 1].set_ylabel("CRE / W m${^-2}$")
+    axes[3, 1].legend()
+
+    for ax in axes.flatten():
+        ax.set_xscale("log")
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.set_title("")
+        ax.set_xlabel("")
+        ax.set_xlim(IWP_bins.min(), IWP_bins.max())
+
+    axes[3, 0].set_xlabel("IWP / kg m$^{-2}$")
+    axes[3, 1].set_xlabel("IWP / kg m$^{-2}$")
+
+    return fig, axes
+
+
+def plot_condensate(sample, ax, min, max, mask, liq_cld_cond, ice_cld_cond, mode="icon"):
+    """
+    Plot the condensate variables (liquid, rain, LWC, ice, IWC, snow, graupel) against a vertical coordinate.
+
+    Parameters:
+    sample (pandas.DataFrame): The sample data containing the condensate variables.
+    ax (matplotlib.axes.Axes): The axes object to plot the data on.
+    min (float): The minimum value of IWP (Ice Water Path) to consider for plotting.
+    max (float): The maximum value of IWP (Ice Water Path) to consider for plotting.
+    mask (pandas.Series): The mask to apply on the data.
+    liq_cld_cond (xarray.DataArray): The liquid condensate data.
+    ice_cld_cond (xarray.DataArray): The ice condensate data.
+    mode (str, optional): The mode of plotting. Defaults to "icon".
+
+    Returns:
+    matplotlib.axes.Axes: The axes object with the plotted data.
+    """
+    ax2 = ax.twiny()
+
+    if mode == 'icon':
+        vert_coord = sample['level_full']
+    else:
+        vert_coord = sample['pressure']/100
+
+    mean_liq = hor_mean(
+        liq_cld_cond.where((sample["IWP"] >= min) & (sample["IWP"] < max) & mask), mode
+    )
+    mean_ice = hor_mean(
+        ice_cld_cond.where((sample["IWP"] >= min) & (sample["IWP"] < max) & mask), mode
+    )
+
+    mean_rain = hor_mean(
+        sample["rain"].where((sample["IWP"] >= min) & (sample["IWP"] < max) & mask), mode
+    )
+    mean_lwc = hor_mean(
+        sample["LWC"].where((sample["IWP"] >= min) & (sample["IWP"] < max) & mask), mode
+    )
+    mean_iwc = hor_mean(
+        sample["IWC"]
+        .where((sample["IWP"] >= min) & (sample["IWP"] < max) & mask), mode
+    )
+    mean_snow = hor_mean(
+        sample["snow"]
+        .where((sample["IWP"] >= min) & (sample["IWP"] < max) & mask), mode
+    )
+    mean_graupel = hor_mean(
+        sample["graupel"]
+        .where((sample["IWP"] >= min) & (sample["IWP"] < max) & mask), mode
+    )
+
+    ax.plot(mean_liq, vert_coord, color="k", label="Liquid")
+    ax.plot(mean_rain, vert_coord, color="k", linestyle="--", label="Rain")
+    ax.plot(mean_lwc, vert_coord, color="k", linestyle=":", label="LWC")
+    ax2.plot(mean_ice, vert_coord, color="b", label="Ice")
+    ax2.plot(mean_iwc, vert_coord, color="b", linestyle=":", label="IWC")
+    ax2.plot(mean_snow, vert_coord, color="b", linestyle="--", label="Snow")
+    ax2.plot(mean_graupel, vert_coord, color="b", linestyle="-.", label="Graupel")
+    ax2.set_xlabel("Ice Cond. / kg/m$^3$", color="b")
+    ax.set_xlabel("Liquid Cond. / kg/m$^3$")
+    ax.spines["right"].set_visible(False)
+    if mode == 'icon':
+        ax.set_ylim(30, 90)
+    else:
+        ax.set_ylim(1000, 100)
+    ax2.spines["right"].set_visible(False)
+
+    return ax2
+
+
+def plot_num_connected(sample, ax, min, max, mask):
+    """
+    Plot the number of connected profiles within a given range of IWP values.
+
+    Parameters:
+    - sample: DataFrame
+        The sample data containing the IWP and connected columns.
+    - ax: AxesSubplot
+        The matplotlib axes object to plot on.
+    - min: float
+        The minimum IWP value for the range.
+    - max: float
+        The maximum IWP value for the range.
+    - mask: boolean array
+        A boolean mask to filter the sample data.
+
+    Returns:
+    None
+    """
+
+    mask_selection = mask & (sample["IWP"] > min) & (sample["IWP"] < max)
+    connected = sample["connected"].where(mask_selection)
+    n_profiles = (~np.isnan(connected) * 1).sum().values
+    connected_profiles = connected.sum().values
+
+    ax.text(0.05, 0.90, f"{min:.0e} kg/m$^3$ - {max:.0e} kg/m$^3$", transform=ax.transAxes)
+    ax.text(0.05, 0.85, f"Number of Profiles: {n_profiles:.0f}", transform=ax.transAxes)
+    ax.text(
+        0.05,
+        0.80,
+        f"Connected Profiles: {connected_profiles.sum()/n_profiles*100:.1f}%",
+        transform=ax.transAxes,
+    )
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_visible(False)
+    ax.spines["bottom"].set_visible(False)
+    ax.set_yticks([])
+    ax.set_xticks([])
+
+
+def plot_connectedness(sample, mask, liq_cld_cond, ice_cld_cond, mode="icon"):
+    """
+    Plots the connectedness of cloud condensate and the number of connected regions
+    as a function of ice water path (IWP) bins.
+
+    Parameters:
+    - sample: The sample data.
+    - mask: The mask data.
+    - liq_cld_cond: The liquid cloud condensate data.
+    - ice_cld_cond: The ice cloud condensate data.
+    - mode: The mode of the plot. Default is "icon".
+
+    Returns:
+    - fig: The matplotlib figure object.
+    - axes: The matplotlib axes object.
+    """
+
+    fig, axes = plt.subplots(2, 6, figsize=(20, 12), sharey="row")
+    iwp_bins = np.logspace(-5, 1, 7)
+
+    for i in range(6):
+        ax2 = plot_condensate(
+            sample, axes[0, i], iwp_bins[i], iwp_bins[i + 1], mask, liq_cld_cond, ice_cld_cond, mode
+        )
+        plot_num_connected(sample, axes[1, i], iwp_bins[i], iwp_bins[i + 1], mask)
+
+    handles, labels = axes[0, 0].get_legend_handles_labels()
+    handles2, labels2 = ax2.get_legend_handles_labels()
+    fig.legend(
+        handles + handles2, labels + labels2, bbox_to_anchor=(0.5, 0.3), loc="lower center", ncols=4
+    )
+    if mode == "icon":
+        axes[0, 0].set_ylabel("Model Level")
+        axes[0, 0].invert_yaxis()
+    else:
+        axes[0, 0].set_ylabel("Pressure / hPa")
+    
+    # Set the x-axis formatter
+    for ax in axes.flatten():
+        formatter = ScalarFormatter(useMathText=True)
+        formatter.set_powerlimits((-1, 2))
+        ax.xaxis.set_major_formatter(formatter)
+
+    return fig, axes
+
+
+def plot_sum_cre(result, sample, iwp_bins, mode='icon'):
+
+    if mode == 'icon':
+        n_cells = (len(sample.cell) * len(sample.time))
+    else:
+        n_cells = len(sample.lat) * len(sample.lon)
+
+    hist, edges = np.histogram(sample["IWP"], bins=iwp_bins)
+    hist = hist / n_cells
+    sum_sw = (result["SW_cre"] * hist).sum()
+    sum_lw = (result["LW_cre"] * hist).sum()
+    sum_net = sum_sw + sum_lw
+
+    fig, axes = plt.subplots(2, 1, figsize=(8, 8), sharex="col")
+
+    result["SW_cre"].plot(ax=axes[0], label="SW CRE", color="blue")
+    result["LW_cre"].plot(ax=axes[0], label="LW CRE", color="red")
+    (result["SW_cre"] + result["LW_cre"]).plot(ax=axes[0], label="Net CRE", color="black")
+    axes[0].legend()
+    axes[0].axhline(0, color="grey", linestyle="--")
+    axes[0].set_ylabel("CRE / Wm$^{-2}$")
+
+    axes[1].stairs(hist, edges, label="IWP", color="black")
+    axes[1].set_xscale("log")
+    axes[1].set_xlabel("IWP / kgm$^{-2}$")
+    axes[1].set_ylabel("Fraction of Gridcells")
+
+    axes[1].text(
+        0.7, 0.90, f"SW CRE: {sum_sw:.2f} W/m$^2$", transform=axes[1].transAxes, color="blue"
+    )
+    axes[1].text(
+        0.7, 0.83, f"LW CRE: {sum_lw:.2f} W/m$^2$", transform=axes[1].transAxes, color="red"
+    )
+    axes[1].text(
+        0.7, 0.76, f"Net CRE: {sum_net:.2f} W/m$^2$", transform=axes[1].transAxes, color="black"
+    )
+
+    for ax in axes:
+        ax.spines[["top", "right"]].set_visible(False)
 
     return fig, axes

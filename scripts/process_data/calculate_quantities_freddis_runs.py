@@ -1,7 +1,7 @@
 # %%
 import xarray as xr
 import numpy as np
-from src.icon_arts_analysis import define_connected
+from src.calc_variables import calc_connected
 import os
 
 # %% load data from freddis runs
@@ -44,7 +44,9 @@ atms["IWP"] = ((atms["IWC"] + atms["snow"] + atms["graupel"]) * cell_height).sum
 atms["LWP"] = ((atms["rain"] + atms["LWC"]) * cell_height).sum("pressure")
 
 # ice mass needs to be reversed along pressure coord to calculate cumsum from the toa
-ice_mass = ((atms["IWC"] + atms['graupel'] + atms['snow']) * cell_height).reindex(pressure=list(reversed(atms.pressure)))
+ice_mass = ((atms["IWC"] + atms["graupel"] + atms["snow"]) * cell_height).reindex(
+    pressure=list(reversed(atms.pressure))
+)
 atms["IWC_cumsum"] = ice_mass.cumsum("pressure").reindex(pressure=list(reversed(atms.pressure)))
 
 # %% calculate lc fraction
@@ -116,7 +118,24 @@ fluxes_3d["albedo_clearsky"] = np.abs(
 )
 
 # %% calculate connectedness
-atms['connected'] = define_connected(atms, frac_no_cloud=0.05, rain=True)
+atms["connected"] = calc_connected(atms, frac_no_cloud=0.05, rain=True, convention='arts')
+
+# %% calculate high cloud temperature from vertically integrated IWP
+IWP_emission = 8e-3  # IWP where high clouds become opaque
+
+p_top_idx_thin = (atms["IWC"] + atms['snow'] + atms['graupel']).argmax("pressure")
+p_top_idx_thick = np.abs(atms["IWC_cumsum"] - IWP_emission).argmin("pressure")
+p_top_idx = xr.where(p_top_idx_thick > p_top_idx_thin, p_top_idx_thick, p_top_idx_thin)
+p_top = atms.isel(pressure=p_top_idx).pressure
+T_h_lw = atms["temperature"].sel(pressure=p_top)
+atms["hc_temperature"] = T_h_lw
+atms["hc_top_pressure"] = p_top
+
+# %% find profiles with high cloud tops above 350 hPa
+mask_hc_no_lc = (atms["IWP"] > 1e-7) & (atms["LWP"] < 1e-7)
+mask_height = p_top < 35000
+atms["mask_height"] = mask_height
+atms["mask_hc_no_lc"] = mask_hc_no_lc
 
 # %% save results
 os.remove(path_freddi + run + "atms_full.nc")

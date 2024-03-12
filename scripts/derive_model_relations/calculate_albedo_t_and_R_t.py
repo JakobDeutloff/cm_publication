@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from src.read_data import load_atms_and_fluxes
 from src.plot_functions import scatterplot
-from src.icon_arts_analysis import cut_data
+from calc_variables import cut_data
 from scipy.stats import linregress
 from scipy.interpolate import griddata
 from scipy.optimize import curve_fit

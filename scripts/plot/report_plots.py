@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pickle
 from src.read_data import load_cre, load_derived_vars, load_atms_and_fluxes
-from src.icon_arts_analysis import cut_data
+from calc_variables import cut_data
 
 # %% load data
 cre_binned, cre_interpolated, cre_average = load_cre()
