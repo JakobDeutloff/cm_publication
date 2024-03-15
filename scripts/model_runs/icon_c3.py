@@ -17,12 +17,15 @@ const_lc_quantities = load_average_lc_parameters()
 sample = xr.open_dataset("/work/bm1183/m301049/nextgems_profiles/cycle3/representative_sample_c3_conn3.nc")
 
 # %% calculate constants used in the model
-albedo_cs = cut_data(fluxes_3d["albedo_clearsky"]).mean()
-R_t_cs = cut_data(fluxes_3d['clearsky_lw_up']).isel(pressure=-1).mean()
-SW_in = cut_data(fluxes_3d["clearsky_sw_down"]).isel(pressure=-1).mean()
+albedo_cs = cut_data(fluxes_3d["albedo_clearsky"]).mean().values
+R_t_cs = cut_data(fluxes_3d['clearsky_lw_up']).isel(pressure=-1).mean().values
+SW_in = cut_data(fluxes_3d["clearsky_sw_down"]).isel(pressure=-1).mean().values
 
 # %% mask out high clouds with tops below 350 hPa
 mask = sample['mask_height']
+
+# %% Set additional parameters
+parameters['lc_fraction'] = 0.37
 
 # %% run model
 result = run_model(
@@ -33,7 +36,7 @@ result = run_model(
     T_hc = sample["hc_temperature"].where(mask),
     LWP = sample['LWP'].where(mask),
     IWP = sample['IWP'].where(mask),
-    connectedness=sample['connected'].where(mask),
+    connectedness=False,
     parameters = parameters,
     const_lc_quantities=const_lc_quantities,
     prescribed_lc_quantities=None
@@ -41,7 +44,7 @@ result = run_model(
 
 # %% save result 
 path = '/work/bm1183/m301049/cm_results/'
-with open(path + 'icon_c3.pkl', 'wb') as f:
+with open(path + 'icon_c3_zero_lc.pkl', 'wb') as f:
     pickle.dump(result, f)
 
 # %%

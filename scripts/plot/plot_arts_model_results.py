@@ -23,9 +23,9 @@ const_lc_quantities = load_average_lc_parameters()
 
 
 path = '/work/bm1183/m301049/cm_results/'
-run = 'monsoon'
+run = 'icon_mons'
 
-with open(path + "res_" + run + '.pkl', 'rb') as f:
+with open(path + run + '.pkl', 'rb') as f:
     result = pickle.load(f)
 
 # %% create folder

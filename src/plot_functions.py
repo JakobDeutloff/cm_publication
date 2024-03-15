@@ -660,15 +660,15 @@ def plot_sum_cre(result, sample, iwp_bins, mode='icon'):
 
     hist, edges = np.histogram(sample["IWP"], bins=iwp_bins)
     hist = hist / n_cells
-    sum_sw = (result["SW_cre"] * hist).sum()
-    sum_lw = (result["LW_cre"] * hist).sum()
+    sum_sw = (result["SW_cre_ac"] * hist).sum()
+    sum_lw = (result["LW_cre_ac"] * hist).sum()
     sum_net = sum_sw + sum_lw
 
     fig, axes = plt.subplots(2, 1, figsize=(8, 8), sharex="col")
 
-    result["SW_cre"].plot(ax=axes[0], label="SW CRE", color="blue")
-    result["LW_cre"].plot(ax=axes[0], label="LW CRE", color="red")
-    (result["SW_cre"] + result["LW_cre"]).plot(ax=axes[0], label="Net CRE", color="black")
+    result["SW_cre_ac"].plot(ax=axes[0], label="SW CRE", color="blue")
+    result["LW_cre_ac"].plot(ax=axes[0], label="LW CRE", color="red")
+    (result["SW_cre_ac"] + result["LW_cre_ac"]).plot(ax=axes[0], label="Net CRE", color="black")
     axes[0].legend()
     axes[0].axhline(0, color="grey", linestyle="--")
     axes[0].set_ylabel("CRE / Wm$^{-2}$")

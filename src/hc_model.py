@@ -1,7 +1,7 @@
 # %% import
 import numpy as np
 import pandas as pd
-
+import xarray as xr
 
 # define functions to calculate model quantities
 
@@ -31,7 +31,7 @@ def logistic(x, L, x0, k, j):
     return L / (1 + np.exp(-k * (x - x0))) + j
 
 
-def calc_lc_fraction(LWP, connected, threshold=1e-4):
+def calc_lc_fraction(LWP, connected, fix_val, threshold=1e-4):
     """
     Calculates the low cloud fraction.
 
@@ -49,7 +49,10 @@ def calc_lc_fraction(LWP, connected, threshold=1e-4):
     lc_fraction: array-like
         Low cloud fraction.
     """
-    lc_fraction = ((LWP >= threshold) & (connected != 1)) * 1
+    if connected:
+        lc_fraction = ((LWP >= threshold) & (connected != 1)) * 1
+    else:
+        lc_fraction = xr.DataArray(data=np.ones_like(LWP) * fix_val, dims=LWP.dims, coords=LWP.coords)
     return lc_fraction
 
 
@@ -202,7 +205,7 @@ def calc_R_t(
     avg_value = lc_fraction * lc_value + (1 - lc_fraction) * R_t_cs + h2o_correction
     if prescribed_lc_quantities is not None:
         avg_value = prescribed_lc_quantities["R_t"]
-    return avg_value
+    return avg_value, h2o_correction
 
 
 def hc_sw_cre(alpha_hc, alpha_t, SW_in):
@@ -249,6 +252,54 @@ def hc_lw_cre(em_hc, T_h, R_t, sigma):
         LW CRE of the high clouds.
     """
     return em_hc * ((-1 * sigma * T_h**4) - R_t)
+
+def ac_sw_cre(alpha_cs, alpha_t, alpha_hc, SW_in):
+    """
+    Calculates the SW CRE of the entire cloud population (hc + lc).
+
+    PARAMETERS:
+    ---------------------------
+    alpha_cs: float
+        Clearsky albedo.
+    alpha_t: array-like
+        Albedo below high clouds.
+    alpha_hc: array-like
+        High cloud albedo.
+    SW_in: float
+        Daily average SW radiation at TOA.
+
+    RETURNS:
+    ---------------------------
+    SW_cre: array-like
+        SW CRE of the high clouds.
+    """
+    return -SW_in * (alpha_hc + (alpha_t * (1 - alpha_hc) ** 2) / (1 - alpha_t * alpha_hc) - alpha_cs)
+
+def ac_lw_cre(emm_hc, T_h, R_t, R_cs, h20_corr, sigma):
+    """
+    Calculates the LW CRE of the entire cloud population (hc + lc).
+
+    PARAMETERS:
+    ---------------------------
+    em_hc: array-like
+        High cloud emissivity.
+    T_h: array-like
+        High cloud temperature.
+    R_t: array-like
+        LW radiation from below high clouds.
+    R_cs: float
+        Clearsky LW radiation.
+    h20_corr: array-like
+        Correction for water vapor.
+    sigma: float
+        Stefan-Boltzmann constant.
+
+    RETURNS:
+    ---------------------------
+    LW_cre: array-like
+        LW CRE of the high clouds.
+    """
+    return  (1 - emm_hc) * R_t - emm_hc * sigma * T_h**4 - (R_cs + h20_corr)
 
 
 def run_model(
@@ -301,12 +352,13 @@ def run_model(
     IWP_points = (IWP_bins[1:] + IWP_bins[:-1]) / 2
 
     # calculate lc fraction
-    lc_fraction = calc_lc_fraction(LWP, connected=connectedness)
+    lc_fraction = calc_lc_fraction(LWP, connected=connectedness, fix_val=parameters["lc_fraction"])
 
     # bin the input data
     T_hc_binned = binning(IWP_bins, T_hc, IWP)
     LWP_binned = binning(IWP_bins, LWP.where(LWP > 1e-4), IWP)
     lc_fraction_binned = binning(IWP_bins, lc_fraction, IWP)
+    
 
     # calculate radiative properties below high clouds
     alpha_t = calc_alpha_t(
@@ -317,7 +369,7 @@ def run_model(
         const_lc_quantities,
         prescribed_lc_quantities,
     )
-    R_t = calc_R_t(
+    R_t, h2o_corr = calc_R_t(
         LWP_binned,
         IWP_points,
         lc_fraction_binned,
@@ -336,6 +388,10 @@ def run_model(
     SW_cre = hc_sw_cre(alpha_hc, alpha_t, SW_in)
     LW_cre = hc_lw_cre(em_hc, T_hc_binned, R_t, sigma=5.67e-8)
 
+    # calculate CRE of entire cloud population
+    SW_cre_ac = ac_sw_cre(albedo_cs, alpha_t, alpha_hc, SW_in)
+    LW_cre_ac = ac_lw_cre(em_hc, T_hc_binned, R_t, R_t_cs, h2o_corr, sigma=5.67e-8)
+
     # build results df
     results = pd.DataFrame()
     results.index = IWP_points
@@ -349,5 +405,7 @@ def run_model(
     results["em_hc"] = em_hc
     results["SW_cre"] = SW_cre
     results["LW_cre"] = LW_cre
+    results["SW_cre_ac"] = SW_cre_ac
+    results["LW_cre_ac"] = LW_cre_ac
 
     return results

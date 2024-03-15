@@ -28,6 +28,7 @@ SW_in = cut_data(fluxes_3d["clearsky_sw_down"]).isel(pressure=-1).mean()
 
 # %% Set additional parameters
 parameters['threshold_lc_fraction'] = 1e-6
+parameters['lc_fraction'] = 0.37
 
 # %% set mask ans bins 
 mask = lw_vars["mask_height"]
@@ -42,7 +43,7 @@ result = run_model(
     T_hc = cut_data(lw_vars["h_cloud_temperature"], mask),
     LWP = cut_data(atms['LWP'], mask),
     IWP = cut_data(atms['IWP'], mask),
-    connectedness=atms['connected'],
+    connectedness=False,
     parameters = parameters,
     const_lc_quantities=const_lc_quantities,
     prescribed_lc_quantities=None
