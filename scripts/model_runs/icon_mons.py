@@ -9,7 +9,7 @@ from src.read_data import (
     load_cre,
     load_average_lc_parameters,
 )
-from src.calc_variables import cut_data
+from src.helper_functions import cut_data
 import pickle
 
 # %% load data
@@ -22,13 +22,13 @@ const_lc_quantities = load_average_lc_parameters()
 model_results={}
 
 # %% calculate constants used in the model
-albedo_cs = cut_data(fluxes_3d["albedo_clearsky"]).mean()
-R_t_cs = cut_data(fluxes_3d['clearsky_lw_up']).isel(pressure=-1).mean()
-SW_in = cut_data(fluxes_3d["clearsky_sw_down"]).isel(pressure=-1).mean()
+albedo_cs = cut_data(fluxes_3d["albedo_clearsky"]).mean().values
+R_t_cs = cut_data(fluxes_3d['clearsky_lw_up']).isel(pressure=-1).mean().values
+SW_in = cut_data(fluxes_3d["clearsky_sw_down"]).isel(pressure=-1).mean().values
 
 # %% Set additional parameters
 parameters['threshold_lc_fraction'] = 1e-6
-parameters['lc_fraction'] = 0.37
+parameters['lc_fraction'] = 0.0
 
 # %% set mask ans bins 
 mask = lw_vars["mask_height"]
@@ -43,13 +43,13 @@ result = run_model(
     T_hc = cut_data(lw_vars["h_cloud_temperature"], mask),
     LWP = cut_data(atms['LWP'], mask),
     IWP = cut_data(atms['IWP'], mask),
-    connectedness=False,
+    connectedness=atms['connected'],
     parameters = parameters,
     const_lc_quantities=const_lc_quantities,
     prescribed_lc_quantities=None
 )
 # %% save result 
 path = '/work/bm1183/m301049/cm_results/'
-with open(path + 'icon_mons.pkl', 'wb') as f:
+with open(path + 'icon_mons_zero_lc.pkl', 'wb') as f:
     pickle.dump(result, f)
 # %%

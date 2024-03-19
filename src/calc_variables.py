@@ -119,19 +119,6 @@ def bin_and_average_cre(cre, IWP_bins, lon_bins, atms, modus="ice_only"):
 
     return cre_arr, interp_cre, interp_cre_average
 
-
-def cut_data(data, mask=True):
-    return data.sel(lat=slice(-30, 30)).where(mask)
-
-
-def cut_data_mixed(data_cs, data_lc, mask, connected):
-    # returns lc data fro not connnected profiles and cs data for connected profiles at mask
-    data = xr.where(connected == 0 & mask, x=data_lc.where(mask), y=data_cs.where(mask)).sel(
-        lat=slice(-30, 30)
-    )
-    return data
-
-
 def calc_connected(atms, frac_no_cloud=0.05, rain=True, convention="icon"):
     """
     defines for all profiles with ice above liquid whether
@@ -158,7 +145,7 @@ def calc_connected(atms, frac_no_cloud=0.05, rain=True, convention="icon"):
     else:
         liq = atms["LWC"]
 
-    if convention == "icon":
+    if (convention == "icon") or (convention == "icon_binned"):
         vert_coord = "level_full"
     elif convention == "arts":
         vert_coord = "pressure"
@@ -183,6 +170,11 @@ def calc_connected(atms, frac_no_cloud=0.05, rain=True, convention="icon"):
         lon, lat = np.meshgrid(mask_both_clds.lon, mask_both_clds.lat)
         lat_valid = lat[mask_both_clds]
         lon_valid = lon[mask_both_clds]
+    elif convention == "icon_binned":
+        sw, iwp, profile = np.meshgrid(mask_both_clds.sw, mask_both_clds.iwp, mask_both_clds.profile)
+        iwp_valid = iwp[mask_both_clds]
+        sw_valid = sw[mask_both_clds]
+        profile_valid = profile[mask_both_clds]
 
     # create connectedness array
     connected = xr.DataArray(
@@ -221,6 +213,20 @@ def calc_connected(atms, frac_no_cloud=0.05, rain=True, convention="icon"):
             for j in range(len(cld_range.pressure)):
                 if cld_range.isel(pressure=j).sum() == 0:
                     connected.loc[dict(lat=lat_valid[i], lon=lon_valid[i])] = 0
+                    break
+
+        elif convention == "icon_binned":
+            liq_point = liq.sel(sw=sw_valid[i], iwp=iwp_valid[i], profile=profile_valid[i])
+            ice_point = ice.sel(sw=sw_valid[i], iwp=iwp_valid[i], profile=profile_valid[i])
+            p_top_idx = ice_point.argmax(vert_coord).values
+            p_bot_idx = liq_point.argmax(vert_coord).values
+            cld_range = no_cld.sel(sw=sw_valid[i], iwp=iwp_valid[i], profile=profile_valid[i]).isel(
+                level_full=slice(p_top_idx, p_bot_idx)
+            )
+            # high and low clouds are not connected if there is a 1-cell deep layer without cloud
+            for j in range(len(cld_range.level_full)):
+                if cld_range.isel(level_full=j).sum() == 0:
+                    connected.loc[dict(sw=sw_valid[i], iwp=iwp_valid[i], profile=profile_valid[i])] = 0
                     break
 
     return connected
@@ -347,9 +353,9 @@ def convert_to_density(ds, key):
 def calc_cf(ds):
     """
     Calculate cloud fraction from cloud ice and cloud liquid water content
-    If cloud condensate exceeds 10^-6 kg/kg, it is set to 1, otherwise to 0.
+    If cloud condensate exceeds 10^-6 kg/m^3, it is set to 1, otherwise to 0.
     """
-    cf = ((ds["cli"] + ds["clw"] + ds['qr'] + ds['qs'] + ds['qg']) > 10 ** (-8)).astype(int)
+    cf = ((ds["IWC"] + ds["LWC"] + ds['rain'] + ds['snow'] + ds['graupel']) > 5 * 10 ** (-9)).astype(int)
     cf.attrs = {
         "component": "atmo",
         "grid_mapping": "crs",

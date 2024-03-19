@@ -31,7 +31,7 @@ def logistic(x, L, x0, k, j):
     return L / (1 + np.exp(-k * (x - x0))) + j
 
 
-def calc_lc_fraction(LWP, connected, fix_val, threshold=1e-4):
+def calc_lc_fraction(LWP, connected, threshold=1e-4):
     """
     Calculates the low cloud fraction.
 
@@ -49,10 +49,7 @@ def calc_lc_fraction(LWP, connected, fix_val, threshold=1e-4):
     lc_fraction: array-like
         Low cloud fraction.
     """
-    if connected:
-        lc_fraction = ((LWP >= threshold) & (connected != 1)) * 1
-    else:
-        lc_fraction = xr.DataArray(data=np.ones_like(LWP) * fix_val, dims=LWP.dims, coords=LWP.coords)
+    lc_fraction = ((LWP >= threshold) & (connected != 1)) * 1
     return lc_fraction
 
 
@@ -74,7 +71,10 @@ def binning(IWP_bins, data, IWP):
     binned_data: array-like
         Binned data.
     """
-    return data.groupby_bins(IWP, IWP_bins).mean()
+    if type(data) == float:
+        return data 
+    else:
+        return data.groupby_bins(IWP, IWP_bins).mean()
 
 
 def calc_hc_albedo(IWP, alpha_hc_params):
@@ -351,8 +351,11 @@ def run_model(
 
     IWP_points = (IWP_bins[1:] + IWP_bins[:-1]) / 2
 
-    # calculate lc fraction
-    lc_fraction = calc_lc_fraction(LWP, connected=connectedness, fix_val=parameters["lc_fraction"])
+    # calculate lc fraction if needed 
+    if parameters["lc_fraction"] is None:
+        lc_fraction = calc_lc_fraction(LWP, connected=connectedness, fix_val=parameters["lc_fraction"])
+    else:
+        lc_fraction = parameters["lc_fraction"]
 
     # bin the input data
     T_hc_binned = binning(IWP_bins, T_hc, IWP)

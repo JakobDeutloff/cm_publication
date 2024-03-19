@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import xarray as xr
 from src.read_data import load_atms_and_fluxes, load_derived_vars
-from calc_variables import cut_data
+from src.helper_functions import cut_data
 from scipy.stats import linregress
 import pickle 
 
@@ -61,7 +61,7 @@ axes[0].set_ylabel('R$_t$ / W/m$^2$')
 
 sc = axes[1].scatter(
     cut_data(atms['IWP'], mask=mask),
-    cut_data(col_h2o, mask=mask),
+    cut_data(aux['surface temperature'], mask=mask),
     s=0.5,
     color='k'
 )

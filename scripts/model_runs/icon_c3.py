@@ -6,7 +6,7 @@ from src.read_data import (
     load_parameters,
     load_average_lc_parameters,
 )
-from src.calc_variables import cut_data
+from src.helper_functions import cut_data
 import pickle
 import xarray as xr
 
@@ -44,7 +44,7 @@ result = run_model(
 
 # %% save result 
 path = '/work/bm1183/m301049/cm_results/'
-with open(path + 'icon_c3_zero_lc.pkl', 'wb') as f:
+with open(path + 'icon_c3_const_lc.pkl', 'wb') as f:
     pickle.dump(result, f)
 
 # %%

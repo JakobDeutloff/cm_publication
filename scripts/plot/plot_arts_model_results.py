@@ -23,7 +23,7 @@ const_lc_quantities = load_average_lc_parameters()
 
 
 path = '/work/bm1183/m301049/cm_results/'
-run = 'icon_mons'
+run = 'icon_mons_zero_lc'
 
 with open(path + run + '.pkl', 'rb') as f:
     result = pickle.load(f)
@@ -63,3 +63,4 @@ fig.savefig(f"plots/model_results/{run}/connectedness.png", dpi=300, bbox_inches
 fig, axes = plot_sum_cre(result, atms, np.logspace(-5, 1, 50), mode='arts')
 fig.savefig(f'plots/model_results/{run}/cre_integrated.png', dpi=300, bbox_inches='tight')
 
+# %% 

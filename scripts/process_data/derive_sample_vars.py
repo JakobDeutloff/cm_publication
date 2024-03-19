@@ -7,15 +7,13 @@ from src.calc_variables import (
     calculate_h_cloud_temperature,
     calc_connected,
 )
-import os
-from dask.diagnostics import ProgressBar
 
 # %% setting
-rename = True
+rename = False
 
 # %%
-path = "/work/bm1183/m301049/nextgems_profiles/cycle4/"
-file = "representative_sample_c4.nc"
+path = "/work/um0878/user_data/jdeutloff/icon_c3_sample/"
+file = "atms.nc"
 sample = xr.open_dataset(path + file)
 
 # %% rename variables
@@ -38,13 +36,13 @@ if rename:
 sample["LWP"] = calc_LWP(sample)
 sample["IWP"] = calc_IWP(sample)
 sample["IWC_cumsum"] = calculate_IWC_cumsum(sample)
-sample["connected"] = calc_connected(sample)
+sample["connected"] = calc_connected(sample, convention='icon_binned')
 sample["hc_temperature"], sample["hc_top_index"] = calculate_h_cloud_temperature(sample)
 
 # %% mask for valid high clouds
 sample["mask_height"] = sample.sel(level_full=sample["hc_top_index"])["pressure"] < 35000
 
 # %% save
-sample.to_netcdf(path + "representative_sample_c4_conn3.nc")
+sample.to_netcdf(path + "atms_full.nc")
 
 # %%

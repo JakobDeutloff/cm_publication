@@ -7,7 +7,7 @@ import os
 
 # %% load data
 path = '/work/bm1183/m301049/cm_results/'
-run = "icon_c3_zero_lc"
+run = "icon_c3_const_lc"
 
 with open(path + run + '.pkl', 'rb') as f:
     result = pickle.load(f)
@@ -36,4 +36,4 @@ iwp_bins = np.logspace(-5, 1, 7)
 fig, axes = plot_connectedness(sample, mask, liq_cld_cond, ice_cld_cond)
 fig.savefig(f"plots/model_results/{run}/connectedness.png", dpi=300, bbox_inches="tight")
 
-# %%
+# %% 
