@@ -2,7 +2,7 @@
 import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
-from calc_variables import calc_cre, bin_and_average_cre
+from src.calc_variables import calc_cre, bin_and_average_cre
 from src.read_data import load_atms_and_fluxes, load_derived_vars
 
 # %% load  data
@@ -84,7 +84,7 @@ fig, axes = plt.subplots(2, 2, figsize=(10, 9), sharey="row")
 pcol = axes[0, 0].pcolor(
     IWP_bins,
     lon_bins,
-    cre_binned["ice_only"]["net"].T,
+    cre_binned["ice_only"]["sw"].T,
     cmap="seismic",
     vmin=-600,
     vmax=600,
@@ -94,7 +94,7 @@ axes[0, 0].set_title("CRE binned ice only")
 axes[0, 1].pcolor(
     IWP_bins,
     lon_bins,
-    cre_interpolated["ice_only"]["net"].T,
+    cre_interpolated["ice_only"]["sw"].T,
     cmap="seismic",
     vmin=-600,
     vmax=600,
@@ -103,7 +103,7 @@ axes[0, 1].set_title("CRE interpolated ice only")
 axes[1, 0].pcolor(
     IWP_bins,
     lon_bins,
-    cre_binned["connected"]["net"].T,
+    cre_binned["connected"]["sw"].T,
     cmap="seismic",
     vmin=-600,
     vmax=600,
@@ -114,7 +114,7 @@ axes[1, 0].set_title("CRE binned all clouds")
 axes[1, 1].pcolor(
     IWP_bins,
     lon_bins,
-    cre_interpolated["connected"]["net"].T,
+    cre_interpolated["connected"]["sw"].T,
     cmap="seismic",
     vmin=-600,
     vmax=600,
@@ -135,148 +135,7 @@ fig.colorbar(
     pad=0.1,
 )
 
-fig.savefig("plots/CRE_binned_by_IWP_and_lon.png", dpi=300, bbox_inches="tight")
-
-# %% plot mean CRE vs IWP
-fig, axes = plt.subplots(1, 5, sharey="row", figsize=(20, 4))
-
-end = -1
-
-# ice only
-axes[0].plot(
-    IWP_points[:end],
-    cre_interpolated_average["ice_only"]["net"][:end],
-    label="Net CRE",
-    color="k",
-)
-axes[0].plot(
-    IWP_points[:end],
-    cre_interpolated_average["ice_only"]["sw"][:end],
-    label="SW CRE",
-    color="blue",
-)
-axes[0].plot(
-    IWP_points[:end],
-    cre_interpolated_average["ice_only"]["lw"][:end],
-    label="LW CRE",
-    color="r",
-)
-
-# ice over low clouds
-axes[1].plot(
-    IWP_points[:end],
-    cre_interpolated_average["ice_over_lc"]["net"][:end],
-    label="Net CRE",
-    color="k",
-)
-axes[1].plot(
-    IWP_points[:end],
-    cre_interpolated_average["ice_over_lc"]["sw"][:end],
-    label="SW CRE",
-    color="blue",
-)
-axes[1].plot(
-    IWP_points[:end],
-    cre_interpolated_average["ice_over_lc"]["lw"][:end],
-    label="LW CRE",
-    color="r",
-)
-
-# noice
-axes[2].plot(
-    IWP_points[:end],
-    cre_interpolated_average["all"]["net"][:end],
-    label="Net CRE",
-    color="k",
-)
-axes[2].plot(
-    IWP_points[:end],
-    cre_interpolated_average["all"]["sw"][:end],
-    label="SW CRE",
-    color="blue",
-)
-axes[2].plot(
-    IWP_points[:end],
-    cre_interpolated_average["all"]["lw"][:end],
-    label="LW CRE",
-    color="r",
-)
-
-# normal cre - all clouds included
-axes[3].plot(
-    IWP_points[:end],
-    cre_interpolated_average["cre"]["net"][:end],
-    label="Net CRE",
-    color="k",
-)
-axes[3].plot(
-    IWP_points[:end],
-    cre_interpolated_average["cre"]["sw"][:end],
-    label="SW CRE",
-    color="blue",
-)
-axes[3].plot(
-    IWP_points[:end],
-    cre_interpolated_average["cre"]["lw"][:end],
-    label="LW CRE",
-    color="r",
-)
-
-# considering connectedness
-axes[4].plot(
-    IWP_points[:end],
-    cre_interpolated_average["connected"]["net"][:end],
-    label="Net CRE",
-    color="k",
-)
-axes[4].plot(
-    IWP_points[:end],
-    cre_interpolated_average["connected"]["sw"][:end],
-    label="SW CRE",
-    color="blue",
-)
-axes[4].plot(
-    IWP_points[:end],
-    cre_interpolated_average["all"]["sw"][:end],
-    label="SW CRE",
-    color="blue",
-    linestyle="--",
-)
-axes[4].plot(
-    IWP_points[:end],
-    cre_interpolated_average["connected"]["lw"][:end],
-    label="LW CRE",
-    color="r",
-)
-axes[4].plot(
-    IWP_points[:end],
-    cre_interpolated_average["all"]["lw"][:end],
-    label="LW CRE",
-    color="r",
-    linestyle="--",
-)
-
-
-for ax in axes:
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.set_xscale("log")
-    ax.set_xlabel("IWP / kg m$^{-2}$")
-    ax.axhline(0, color="k", linestyle="--")
-
-axes[0].set_ylabel("Cloud Radiative Effect / W m$^{-2}$")
-axes[0].set_title("High Clouds no Low Clouds")
-axes[1].set_title("High Clouds over Low Clouds")
-axes[2].set_title("All High Clouds")
-axes[3].set_title("All Clouds")
-axes[4].set_title("All High Clouds Connectedness")
-
-
-# legend outside of axes
-handles, labels = axes[1].get_legend_handles_labels()
-fig.legend(handles, labels, loc="lower center", ncol=3, bbox_to_anchor=(0.5, -0.15))
-fig.savefig("plots/mean_CRE_vs_IWP.png", dpi=300, bbox_inches="tight")
-
+fig.savefig("plots/cre/CRE_binned_by_IWP_and_lon.png", dpi=300, bbox_inches="tight")
 
 # %% build dataset of CREs and save it
 cre_xr = xr.Dataset()

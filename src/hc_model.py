@@ -71,7 +71,7 @@ def binning(IWP_bins, data, IWP):
     binned_data: array-like
         Binned data.
     """
-    if type(data) == float:
+    if type(data) == float or type(data) == np.float64:
         return data 
     else:
         return data.groupby_bins(IWP, IWP_bins).mean()
