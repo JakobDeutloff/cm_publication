@@ -12,4 +12,4 @@
 export PYTHONPATH="${PYTHONPATH}:/home/m/m301049/HcModel/"
 
 # execute python script in respective environment 
-/home/m/m301049/miniconda3/envs/defaultenv/bin/python /home/m/m301049/HcModel/scripts/process_data/derive_sample_vars.py
+/home/m/m301049/miniconda3/envs/defaultenv/bin/python /home/m/m301049/HcModel/scripts/process_data/calc_iwp_monsoon.py

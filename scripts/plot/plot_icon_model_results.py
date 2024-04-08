@@ -25,7 +25,7 @@ fig, axes = plot_model_output_icon(result, iwp_bins , sample.where(sample['mask_
 fig.savefig(f"plots/model_results/{run}/results.png", dpi=300, bbox_inches="tight")
 
 # %% Fold Distribution with CRE
-fig, axes = plot_sum_cre(result, sample, iwp_bins)
+fig, axes = plot_sum_cre(result, sample.where(sample['mask_height']), iwp_bins)
 fig.savefig(f'plots/model_results/{run}/cre_integrated.png', dpi=300, bbox_inches='tight')
 
 # %%  plot connectedness 

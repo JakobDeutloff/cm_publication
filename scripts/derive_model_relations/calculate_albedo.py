@@ -140,7 +140,6 @@ ax.plot(mean_sw_vars['interpolated_albedo'], label="Mean Albedo", color="k")
 ax.plot(IWP_points, logistic_curve, label="Fitted Logistic", color="red", linestyle='--')
 ax.legend()
 
-fig.savefig("plots/albedo.png", dpi=300)
 plt.show()
 
 # %% save coefficients as pkl file

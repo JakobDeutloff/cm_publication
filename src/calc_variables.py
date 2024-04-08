@@ -196,8 +196,8 @@ def calc_connected(atms, frac_no_cloud=0.05, rain=True, convention="icon"):
                 level_full=slice(p_top_idx, p_bot_idx)
             )
             # high and low clouds are not connected if there is a 1-cell deep layer without cloud
-            for j in range(len(cld_range.level_full)-3):
-                if cld_range.isel(level_full=slice(j, j+3)).sum() == 0:
+            for j in range(len(cld_range.level_full)):
+                if cld_range.isel(level_full=j).sum() == 0:
                     connected.loc[dict(cell=cell_valid[i], time=time_valid[i])] = 0
                     break
 

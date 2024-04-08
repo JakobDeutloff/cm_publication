@@ -59,14 +59,14 @@ for ax in axes:
 
 axes[0].set_ylabel("Cloud Radiative Effect / W m$^{-2}$")
 axes[0].set_title("All Clouds")
-axes[1].set_title("High Clouds without Low Clouds")
+axes[1].set_title("High Clouds over Clear Sky")
 axes[2].set_title("High Clouds over Low Clouds")
-axes[3].set_title("All High Clouds")
-axes[4].set_title("All High Clouds Connected")
+axes[3].set_title("All Frozen Clouds")
+axes[4].set_title("All High Clouds")
 
 # legend outside of axes
 handles, labels = axes[1].get_legend_handles_labels()
-fig.legend(handles, labels, loc="lower center", ncol=3, bbox_to_anchor=(0.5, -0.15))
+fig.legend(handles, labels, loc="lower center", ncol=3, bbox_to_anchor=(0.5, -0.17))
 fig.savefig("plots/paper/CREs.png", dpi=300, bbox_inches="tight")
 
 # %% 

@@ -28,7 +28,7 @@ SW_in = cut_data(fluxes_3d["clearsky_sw_down"]).isel(pressure=-1).mean().values
 
 # %% Set additional parameters
 parameters['threshold_lc_fraction'] = 1e-6
-parameters['lc_fraction'] = 0.0
+parameters['lc_fraction'] = 0.16
 
 # %% set mask ans bins 
 mask = lw_vars["mask_height"]
@@ -50,6 +50,6 @@ result = run_model(
 )
 # %% save result 
 path = '/work/bm1183/m301049/cm_results/'
-with open(path + 'icon_mons_zero_lc.pkl', 'wb') as f:
+with open(path + 'icon_mons_const_lc.pkl', 'wb') as f:
     pickle.dump(result, f)
 # %%

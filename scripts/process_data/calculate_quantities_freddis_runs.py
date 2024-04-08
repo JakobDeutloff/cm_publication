@@ -6,7 +6,7 @@ import os
 
 # %% load data from freddis runs
 path_freddi = "/work/bm1183/m301049/icon_arts_processed/"
-run = "fullrange_flux_mid1deg/"
+run = "fullrange_flux_mid1deg_noice/"
 atms = xr.open_dataset(path_freddi + run + "atms.nc")
 fluxes_3d = xr.open_dataset(path_freddi + run + "fluxes_3d.nc")
 aux = xr.open_dataset(path_freddi + run + "aux.nc")
@@ -50,7 +50,7 @@ ice_mass = ((atms["IWC"] + atms["graupel"] + atms["snow"]) * cell_height).reinde
 atms["IWC_cumsum"] = ice_mass.cumsum("pressure").reindex(pressure=list(reversed(atms.pressure)))
 
 # %% calculate lc fraction
-lc_fraction = (atms["LWP"] > 1e-6) * 1
+lc_fraction = (atms["LWP"] > 1e-4) * 1
 atms["lc_fraction"] = lc_fraction
 
 # %% calculate heating rates from fluxes (vertical levels are not quite correct)

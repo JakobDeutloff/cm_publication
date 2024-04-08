@@ -5,28 +5,37 @@ from src.read_data import (
     load_atms_and_fluxes,
     load_parameters,
     load_average_lc_parameters,
+    load_derived_vars,
 )
 from src.helper_functions import cut_data
 import pickle
 import xarray as xr
 from tqdm import tqdm
 
+
 # %% load data
 atms, fluxes_3d, fluxes_3d_noice = load_atms_and_fluxes()
+lw_vars, sw_vars, lc_vars = load_derived_vars()
 parameters = load_parameters()
 const_lc_quantities = load_average_lc_parameters()
-sample = xr.open_dataset("/work/bm1183/m301049/nextgems_profiles/cycle3/representative_sample_c3_conn3.nc")
+model_results={}
 
 # %% calculate constants used in the model
 albedo_cs = cut_data(fluxes_3d["albedo_clearsky"]).mean().values
 R_t_cs = cut_data(fluxes_3d['clearsky_lw_up']).isel(pressure=-1).mean().values
 SW_in = cut_data(fluxes_3d["clearsky_sw_down"]).isel(pressure=-1).mean().values
 
-# %% mask out high clouds with tops below 350 hPa
-mask = sample['mask_height']
+# %% set mask ans bins 
+mask = lw_vars["mask_height"]
+IWP_bins = np.logspace(-5, 1, num=50)
+
+# %% calculate constants used in the model
+albedo_cs = cut_data(fluxes_3d["albedo_clearsky"]).mean().values
+R_t_cs = cut_data(fluxes_3d['clearsky_lw_up']).isel(pressure=-1).mean().values
+SW_in = cut_data(fluxes_3d["clearsky_sw_down"]).isel(pressure=-1).mean().values
 
 # %% setup ensemble 
-lc_fractions=np.arange(0, 0.55, 0.05)
+lc_fractions=np.arange(0, 0.6, 0.1)
 results={}
 
 for lc_fraction in tqdm(lc_fractions):
@@ -39,9 +48,9 @@ for lc_fraction in tqdm(lc_fractions):
         albedo_cs = albedo_cs, 
         R_t_cs = R_t_cs,
         SW_in = SW_in,
-        T_hc = sample["hc_temperature"].where(mask),
-        LWP = sample['LWP'].where(mask),
-        IWP = sample['IWP'].where(mask),
+        T_hc = cut_data(lw_vars["h_cloud_temperature"], mask),
+        LWP = cut_data(atms['LWP'], mask),
+        IWP = cut_data(atms['IWP'], mask),
         connectedness=False,
         parameters = parameters,
         const_lc_quantities=const_lc_quantities,
@@ -55,3 +64,4 @@ for lc_fraction in tqdm(lc_fractions):
 path = '/work/bm1183/m301049/cm_results/'
 with open(path + 'lc_ensemble.pkl', 'wb') as f:
     pickle.dump(results, f)
+# %%

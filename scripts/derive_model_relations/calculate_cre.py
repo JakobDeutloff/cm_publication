@@ -19,7 +19,7 @@ cre_clearsky = calc_cre(fluxes_toa, mode="clearsky")
 cre_noice = calc_cre(fluxes_toa, fluxes_toa_noice, mode="noice")
 
 # %% calculate cre in bins and interpolate
-IWP_bins = np.logspace(-5, 2, num=50)
+IWP_bins = np.logspace(-5, 1, num=50)
 IWP_points = (IWP_bins[1:] + IWP_bins[:-1]) / 2
 lon_bins = np.linspace(-180, 180, num=36)
 lon_points = (lon_bins[1:] + lon_bins[:-1]) / 2

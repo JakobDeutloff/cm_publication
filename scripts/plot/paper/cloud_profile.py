@@ -1,83 +1,119 @@
 # %% import
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 import xarray as xr
-import intake
-from src.healpix_functions import attach_coords, sel_region
-from src.calc_variables import calc_IWP, convert_to_density, calc_dry_air_properties, calc_cf
-from math import log10, floor
+from src.read_data import load_cre
 
-# %% Load icon cycle 3 data
-cat = intake.open_catalog("https://data.nextgems-h2020.eu/catalog.yaml")
-ds = (
-    cat.ICON["ngc3028"](zoom=10, time="PT3H", chunks="auto")
-    .to_dask()
-    .pipe(attach_coords)
-    .sel(time="2023-03-20T00:00:00")
+# %% load data
+cre_binned, cre_interpolated, cre_interpolated_average = load_cre()
+ds = xr.open_dataset(
+    "/work/bm1183/m301049/nextgems_profiles/cycle3/interp_representative_sample.nc"
 )
-ds = sel_region(ds, -30, 30, 0, 360)
+ds_monsoon = xr.open_dataset("/work/bm1183/m301049/nextgems_profiles/monsoon/raw_data_converted.nc")
 
-# %% convert hydrometeors to density
-ds["rho_air"], ds["dry_air"] = calc_dry_air_properties(ds)
-vars = ["cli", "qg", "qs"]
-for var in vars:
-    ds[var] = convert_to_density(ds, var)
+# %% bin by IWP and average
+IWP_bins = np.logspace(-6, 2, 70)
+IWP_points = (IWP_bins[:-1] + np.diff(IWP_bins)) / 2
+ds_binned = ds.groupby_bins("IWP", IWP_bins).mean(["stacked_time_cell"])
 
-# %% rename
-ds = ds.rename({"qr": "rain", "clw": "LWC", "cli": "IWC", "qg": "graupel", "qs": "snow"})
-
-# %% calculate cloud fraction
-ds["cf"] = calc_cf(ds)
-
-# %% calculate IWP and load data
-ds["IWP"] = calc_IWP(ds)
-ds_mem = ds[["IWP", "cf", "zg"]].load()
-
-# %% interpolate from level_full to zg 
-# ds_interp = ds.interp(coords={"level_full": ds["zg"], "cell":ds['cell']}, method="linear")
-
-# %% group cf by IWP and average over percentile
-quantiles = np.arange(0, 1.01, 0.01)
-IWP_quantiles = ds_mem["IWP"].quantile(quantiles, dim=["cell"]).values
-IWP_points = (IWP_quantiles[:-1] + IWP_quantiles[1:])/2
-cf_quantiles = (
-    ds_mem["cf"]
-    .groupby_bins(ds_mem["IWP"], IWP_quantiles, labels=IWP_points)
-    .mean(dim=["cell"])
-)
+# %% find the two model levels closest to temperature and interpolate the pressure_lev coordinate between them
+temps = [273.15]
+levels = pd.DataFrame(index=ds_binned.IWP_bins.values, columns=temps)
+for temp in temps:
+    for iwp in ds_binned.IWP_bins.values:
+        try:
+            ta_vals = ds_binned.sel(IWP_bins=iwp, pressure_lev=slice(10000, 100000))["temperature"]
+            temp_diff = np.abs(ta_vals - temp)
+            level1_idx = temp_diff.argmin("pressure_lev").values
+            level1 = ta_vals.pressure_lev.values[level1_idx]
+            if ta_vals.sel(pressure_lev=level1) > temp:
+                level2 = ta_vals.pressure_lev.values[level1_idx - 1]
+                level_interp = np.interp(
+                    temp,
+                    [
+                        ta_vals.sel(pressure_lev=level2).values,
+                        ta_vals.sel(pressure_lev=level1).values,
+                    ],
+                    [level2, level1],
+                )
+            else:
+                level2 = ta_vals.pressure_lev.values[level1_idx + 1]
+                level_interp = np.interp(
+                    temp,
+                    [
+                        ta_vals.sel(pressure_lev=level1).values,
+                        ta_vals.sel(pressure_lev=level2).values,
+                    ],
+                    [level1, level2],
+                )
+            levels.loc[iwp, temp] = level_interp
+        except:
+            levels.loc[iwp, temp] = np.nan
 
 # %% plot cloud occurence vs IWP percentiles
-fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+fig, axes = plt.subplots(2, 1, figsize=(8, 7), height_ratios=[2, 1], sharex=True)
 
-cf = ax.contourf(
-    quantiles[1:] * 100, ds_mem.level_full, cf_quantiles, cmap="Blues", levels=np.arange(0.1, 1.1, 0.1)
+# plot cloud fraction
+cf = axes[0].contourf(
+    IWP_points,
+    ds.pressure_lev / 100,
+    ds_binned["cf"].T,
+    cmap="Blues",
+    levels=np.arange(0.1, 1.1, 0.1),
 )
-ax.set_ylim(35, 90)
-ax.invert_yaxis()
-ax.invert_xaxis()
-ax.set_xlabel("IWP percentiles")
-ax.set_ylabel("Model Level")
-ax.set_xlim(100, 40)
-ax.set_xticks([100, 90, 80, 70, 60, 50, 40])
+axes[0].plot(IWP_points, levels[273.15].values / 100, color="grey", linestyle="--")
+axes[0].text(2e-6, 590, "0°C", color="grey", fontsize=11)
+axes[0].invert_yaxis()
+axes[0].set_ylabel("Pressure / hPa")
 
-def round_to_1(x):
-   return round(x, -int(floor(log10(abs(x)))))
+# plot CRE
+axes[1].axhline(0, color="grey", linestyle="--")
+axes[1].plot(
+    cre_interpolated_average.IWP,
+    cre_interpolated_average["connected_sw"],
+    label="SW",
+    color="blue",
+)
+axes[1].plot(
+    cre_interpolated_average.IWP,
+    cre_interpolated_average["connected_lw"],
+    label="LW",
+    color="red",
+)
+axes[1].plot(
+    cre_interpolated_average.IWP,
+    cre_interpolated_average["connected_net"],
+    label="Net",
+    color="k",
+)
+axes[1].plot(np.linspace(1 - 6, cre_interpolated_average.IWP.min(), 100), np.zeros(100), color="k")
+axes[1].set_ylabel("HCRE / W m$^{-2}$")
+axes[1].set_xlabel("Ice Water Path / kg m$^{-2}$")
 
-# Create a second x-axis with IWP percentile labels
-xticks = list(ax.get_xticks().astype(int))
-labels2 = IWP_quantiles[xticks]
-labels2 = [round_to_1(label) for label in labels2]
-ax2 = ax.twiny()
-ax2.set_xlim(100, 45)
-ax2.set_xlabel("Percentile Values / kg/m$^2$")
-ax2.set_xticks(xticks)
-ax2.set_xticklabels(labels2) 
+# add colorbar
+fig.subplots_adjust(right=0.8)
+cax = fig.add_axes([0.85, 0.42, 0.02, 0.48])
+fig.colorbar(cf, cax=cax, label="Cloud Cover")
 
-ax.spines[["top", "right"]].set_visible(False)
-ax2.spines[["bottom", "right"]].set_visible(False)
-fig.colorbar(cf, ax=ax, label="Cloud Cover")
+# add legend for axes[1]
+handles, labels = axes[1].get_legend_handles_labels()
+fig.legend(
+    labels=labels,
+    handles=handles,
+    bbox_to_anchor=(0.92, 0.29),
+    frameon=False,
+)
+
+# format axes
+for ax in axes:
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.set_xlim(1e-6, 10)
+    ax.set_xticks([1e1, 1e0, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5])
+    ax.set_xscale("log")
+
 fig.savefig("plots/paper/cloud_profile.svg", bbox_inches="tight")
-fig.savefig("plots/paper/cloud_profile.png", dpi=300, bbox_inches="tight")
+fig.savefig("plots/paper/cloud_profile.png", dpi=500, bbox_inches="tight")
 
 
 # %%

@@ -4,6 +4,8 @@ from src.helper_functions import hor_mean
 import xarray as xr
 import numpy as np
 from matplotlib.ticker import ScalarFormatter
+from matplotlib.colors import LogNorm
+from matplotlib.colors import LinearSegmentedColormap
 
 
 def plot_profiles(lat, lon, atms, fluxes_3d):
@@ -507,10 +509,10 @@ def plot_condensate(sample, ax, min, max, mask, liq_cld_cond, ice_cld_cond, mode
     """
     ax2 = ax.twiny()
 
-    if mode == 'icon':
-        vert_coord = sample['level_full']
+    if mode == "icon":
+        vert_coord = sample["level_full"]
     else:
-        vert_coord = sample['pressure']/100
+        vert_coord = sample["pressure"] / 100
 
     mean_liq = hor_mean(
         liq_cld_cond.where((sample["IWP"] >= min) & (sample["IWP"] < max) & mask), mode
@@ -526,29 +528,26 @@ def plot_condensate(sample, ax, min, max, mask, liq_cld_cond, ice_cld_cond, mode
         sample["LWC"].where((sample["IWP"] >= min) & (sample["IWP"] < max) & mask), mode
     )
     mean_iwc = hor_mean(
-        sample["IWC"]
-        .where((sample["IWP"] >= min) & (sample["IWP"] < max) & mask), mode
+        sample["IWC"].where((sample["IWP"] >= min) & (sample["IWP"] < max) & mask), mode
     )
     mean_snow = hor_mean(
-        sample["snow"]
-        .where((sample["IWP"] >= min) & (sample["IWP"] < max) & mask), mode
+        sample["snow"].where((sample["IWP"] >= min) & (sample["IWP"] < max) & mask), mode
     )
     mean_graupel = hor_mean(
-        sample["graupel"]
-        .where((sample["IWP"] >= min) & (sample["IWP"] < max) & mask), mode
+        sample["graupel"].where((sample["IWP"] >= min) & (sample["IWP"] < max) & mask), mode
     )
 
     ax.plot(mean_liq, vert_coord, color="k", label="Liquid")
     ax.plot(mean_rain, vert_coord, color="k", linestyle="--", label="Rain")
-    ax.plot(mean_lwc, vert_coord, color="k", linestyle=":", label="LWC")
+    ax.plot(mean_lwc, vert_coord, color="k", linestyle=":", label="Cloud Liquid")
     ax2.plot(mean_ice, vert_coord, color="b", label="Ice")
-    ax2.plot(mean_iwc, vert_coord, color="b", linestyle=":", label="IWC")
+    ax2.plot(mean_iwc, vert_coord, color="b", linestyle=":", label="Cloud Ice")
     ax2.plot(mean_snow, vert_coord, color="b", linestyle="--", label="Snow")
     ax2.plot(mean_graupel, vert_coord, color="b", linestyle="-.", label="Graupel")
-    ax2.set_xlabel("Ice Cond. / kg/m$^3$", color="b")
-    ax.set_xlabel("Liquid Cond. / kg/m$^3$")
+    ax2.set_xlabel("Ice / kgm$^{-3}$", color="b")
+    ax.set_xlabel("Liq. / kgm$^{-3}$")
     ax.spines["right"].set_visible(False)
-    if mode == 'icon':
+    if mode == "icon":
         ax.set_ylim(30, 90)
     else:
         ax.set_ylim(1000, 100)
@@ -582,11 +581,11 @@ def plot_num_connected(sample, ax, min, max, mask):
     n_profiles = (~np.isnan(connected) * 1).sum().values
     connected_profiles = connected.sum().values
 
-    ax.text(0.05, 0.90, f"{min:.0e} kg/m$^3$ - {max:.0e} kg/m$^3$", transform=ax.transAxes)
-    ax.text(0.05, 0.85, f"Number of Profiles: {n_profiles:.0f}", transform=ax.transAxes)
+    ax.text(0.05, 0.95, f"IWP Bin: {min:.0e} - {max:.0e}", transform=ax.transAxes)
+    ax.text(0.05, 0.90, f"Number of Profiles: {n_profiles:.0f}", transform=ax.transAxes)
     ax.text(
         0.05,
-        0.80,
+        0.85,
         f"Connected Profiles: {connected_profiles.sum()/n_profiles*100:.1f}%",
         transform=ax.transAxes,
     )
@@ -615,7 +614,7 @@ def plot_connectedness(sample, mask, liq_cld_cond, ice_cld_cond, mode="icon"):
     - axes: The matplotlib axes object.
     """
 
-    fig, axes = plt.subplots(2, 6, figsize=(22, 12), sharey="row")
+    fig, axes = plt.subplots(2, 6, figsize=(16, 10), sharey="row")
     iwp_bins = np.logspace(-5, 1, 7)
     formatter = ScalarFormatter(useMathText=True)
     formatter.set_powerlimits((-1, 2))
@@ -630,14 +629,14 @@ def plot_connectedness(sample, mask, liq_cld_cond, ice_cld_cond, mode="icon"):
     handles, labels = axes[0, 0].get_legend_handles_labels()
     handles2, labels2 = ax2.get_legend_handles_labels()
     fig.legend(
-        handles + handles2, labels + labels2, bbox_to_anchor=(0.5, 0.3), loc="lower center", ncols=4
+        handles + handles2, labels + labels2, bbox_to_anchor=(0.5, 0.35), loc="lower center", ncols=7
     )
     if mode == "icon":
         axes[0, 0].set_ylabel("Model Level")
         axes[0, 0].invert_yaxis()
     else:
         axes[0, 0].set_ylabel("Pressure / hPa")
-    
+
     # Set the x-axis formatter
     for ax in axes.flatten():
         ax.xaxis.set_major_formatter(formatter)
@@ -645,10 +644,10 @@ def plot_connectedness(sample, mask, liq_cld_cond, ice_cld_cond, mode="icon"):
     return fig, axes
 
 
-def plot_sum_cre(result, sample, iwp_bins, mode='icon'):
+def plot_sum_cre(result, sample, iwp_bins, mode="icon"):
 
-    if mode == 'icon':
-        n_cells = (len(sample.cell) * len(sample.time))
+    if mode == "icon":
+        n_cells = len(sample.cell) * len(sample.time)
     else:
         n_cells = len(sample.lat) * len(sample.lon)
 
@@ -684,5 +683,197 @@ def plot_sum_cre(result, sample, iwp_bins, mode='icon'):
 
     for ax in axes:
         ax.spines[["top", "right"]].set_visible(False)
+
+    return fig, axes
+
+
+def plot_model_output_arts_fancy(
+    result,
+    IWP_bins,
+    atms,
+    fluxes_3d_noice,
+    lw_vars,
+    sw_vars,
+    cre_average,
+    lw_binned_vars,
+    sw_binned_vars,
+    f_lc_vals,
+    lc_consts,
+    cs_consts,
+    sample
+):
+    fig = plt.figure(figsize=(15, 10))
+    mask_tuning = lw_vars["mask_height"] & lw_vars["mask_hc_no_lc"]
+    IWP_points = (IWP_bins[1:] + IWP_bins[:-1]) / 2
+
+    # hc temperature
+    ax1 = fig.add_subplot(3, 3, 1)
+    ax1.scatter(
+        cut_data(atms["IWP"], lw_vars["mask_height"]),
+        cut_data(lw_vars["h_cloud_temperature"], lw_vars["mask_height"]),
+        s=0.1,
+        color="grey",
+    )
+    ax1.plot(result["T_hc"], color="red", linestyle="--", label="Mean")
+    ax1.set_ylabel(r"$\mathrm{T_{h}}$ / K")
+    ax1.legend()
+
+    # emissivity
+    ax2 = fig.add_subplot(3, 3, 2)
+    ax2.scatter(
+        cut_data(atms["IWP"], mask_tuning),
+        cut_data(lw_vars["high_cloud_emissivity"], mask_tuning),
+        s=0.1,
+        color="grey",
+    )
+    ax2.plot(lw_binned_vars["binned_emissivity"], color="k", label="Mean")
+    ax2.plot(result["em_hc"], color="red", label="Fitted Logistic", linestyle="--")
+    ax2.set_ylabel(r"$\epsilon$")
+    ax2.legend()
+
+    # alpha
+    ax3 = fig.add_subplot(3, 3, 3)
+
+    sc_alpha = ax3.scatter(
+        cut_data(atms["IWP"], mask_tuning),
+        cut_data(sw_vars["high_cloud_albedo"], mask_tuning),
+        s=0.1,
+        c=cut_data(fluxes_3d_noice["allsky_sw_down"].isel(pressure=-1), mask_tuning),
+        cmap="viridis",
+    )
+    ax3.plot(sw_binned_vars["interpolated_albedo"], color="k", label="Mean")
+    ax3.plot(result["alpha_hc"], color="red", linestyle="--", label="Fitted Logistic")
+    ax3.set_ylabel(r"$\alpha$")
+    ax3.legend()
+
+    # lc fraction
+    ax4 = fig.add_subplot(3, 3, 4)
+    ax4.plot(IWP_points, f_lc_vals["raw"], label="Raw", color="grey")
+    ax4.plot(
+        IWP_points, f_lc_vals["unconnected"], label="Unconnected", color="purple", linestyle="--"
+    )
+    ax4.plot(
+        result["lc_fraction"],
+        color="red",
+        linestyle="--",
+        label="Mean",
+    )
+    ax4.legend()
+    ax4.set_ylabel(r"$f$")
+
+    # R_t
+    ax5 = fig.add_subplot(3, 3, 5)
+    colors = ["black", "grey", "blue"]
+    cmap = LinearSegmentedColormap.from_list("my_cmap", colors)
+    sc_rt = ax5.scatter(
+        cut_data(atms["IWP"], lw_vars["mask_height"]),
+        cut_data_mixed(
+            fluxes_3d_noice["clearsky_lw_up"].isel(pressure=-1),
+            fluxes_3d_noice["allsky_lw_up"].isel(pressure=-1),
+            lw_vars["mask_height"],
+            atms["connected"],
+        ),
+        c=cut_data_mixed(
+            (atms["LWP"] * 0) + 1e-12, atms["LWP"], lw_vars["mask_height"], atms["connected"]
+        ),
+        cmap=cmap,
+        norm=LogNorm(vmin=1e-6, vmax=1e0),
+        s=0.1,
+    )
+    ax5.axhline(cs_consts["R_t"], color="grey", linestyle="--", label="Clearsky")
+    ax5.axhline(lc_consts["R_t"], color="navy", linestyle="--", label="Low Cloud")
+    ax5.plot(result["R_t"], color="red", linestyle="--", label=r"Superposition + $C_{\mathrm{H_2O}}$")
+    ax5.set_ylabel(r"$\mathrm{R_t}$ / $\mathrm{W ~ m^{-2}}$")
+    ax5.legend()
+
+    # a_t
+    ax6 = fig.add_subplot(3, 3, 6)
+    sc_at = ax6.scatter(
+        cut_data(atms["IWP"], lw_vars["mask_height"]),
+        cut_data_mixed(
+            fluxes_3d_noice["albedo_clearsky"],
+            fluxes_3d_noice["albedo_allsky"],
+            lw_vars["mask_height"],
+            atms["connected"],
+        ),
+        c=cut_data_mixed(
+            (atms["LWP"] * 0) + 1e-12, atms["LWP"], lw_vars["mask_height"], atms["connected"]
+        ),
+        cmap=cmap,
+        norm=LogNorm(vmin=1e-6, vmax=1e0),
+        s=0.1,
+    )
+    ax6.axhline(cs_consts['a_t'], color="grey", linestyle="--", label="Clearsky")
+    ax6.axhline(lc_consts['a_t'], color="navy", linestyle="--", label="Low Cloud")
+    ax6.plot(result["alpha_t"], color="red", linestyle="--", label="Superposition")
+    ax6.set_ylabel(r"$\alpha_t$")
+    ax6.legend()
+
+    # CRE 
+    ax7 = fig.add_subplot(3, 2, 5)
+    ax7.plot(cre_average['IWP'], cre_average['connected_sw'], color='blue', linestyle='--')
+    ax7.plot(cre_average['IWP'], cre_average['connected_lw'], color='red', linestyle='--')
+    ax7.plot(cre_average['IWP'], cre_average['connected_net'], color='black', linestyle='--')
+    ax7.plot(result['SW_cre'], color='blue', label='SW', linestyle='-')
+    ax7.plot(result['LW_cre'], color='red', label='LW', linestyle='-')
+    ax7.plot(result['SW_cre'] + result['LW_cre'], color='black', label='Net', linestyle='-')
+    ax7.set_ylabel('HCRE / W m$^{-2}$')
+    handles, label = ax7.get_legend_handles_labels()
+    # fake lines for legend
+    ax7.plot([], [], color='grey', linestyle='--', label='ARTS')
+    ax7.plot([], [], color='grey', linestyle='-', label='Concept')
+    ax7.legend()
+    
+
+    # IWP histogram
+    ax8 = fig.add_subplot(3, 2, 6)
+    n_profiles = len(sample.lat) * len(sample.lon)
+    hist, edges = np.histogram(sample["IWP"].where(sample['mask_height']), bins=IWP_bins)
+    hist = hist / n_profiles
+    ax8.stairs(hist, edges, color='k')
+    ax8.set_ylabel(r'$P$')
+
+    axes = [ax1, ax2, ax3, ax4, ax5, ax6, ax7, ax8]
+    for ax in axes:
+        ax.set_xscale("log")
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.set_title("")
+        ax.set_xlabel("")
+        ax.set_xticks([1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1e0, 1e1])
+        ax.set_xticklabels('')
+        ax.set_xlim(1e-5, 10)
+
+    ax4.set_xticklabels(['1e-5', '1e-4', '1e-3', '1e-2', '1e-1', '1e0', '1e1'])
+    ax5.set_xticklabels(['1e-5', '1e-4', '1e-3', '1e-2', '1e-1', '1e0', '1e1'])
+    ax6.set_xticklabels(['1e-5', '1e-4', '1e-3', '1e-2', '1e-1', '1e0', '1e1'])
+    ax7.set_xlabel("Ice Water Path / kg m$^{-2}$")
+    ax7.set_xticklabels(['1e-5', '1e-4', '1e-3', '1e-2', '1e-1', '1e0', '1e1'])
+    ax8.set_xlabel("Ice Water Path / kg m$^{-2}$")
+    ax8.set_xticklabels(['1e-5', '1e-4', '1e-3', '1e-2', '1e-1', '1e0', '1e1'])
+
+    # add colorbars 
+    fig.subplots_adjust(right=0.9)
+    cbar_ax1 = fig.add_axes([0.91, 0.65, 0.01, 0.22])
+    cbar_ax2 = fig.add_axes([0.91, 0.38, 0.01, 0.22])
+    fig.colorbar(sc_alpha, cax=cbar_ax1, label='SW Down / W m$^{-2}$')
+    fig.colorbar(sc_rt, cax=cbar_ax2, label='LWP / kg m$^{-2}$')
+
+    # add folded CRE 
+    sw_arts = np.sum(cre_average['connected_sw'] * hist)
+    lw_arts = np.sum(cre_average['connected_lw'] * hist)
+    net_arts = np.sum(cre_average['connected_net'] * hist)
+    sw_concept = np.sum(result['SW_cre'] * hist)
+    lw_concept = np.sum(result['LW_cre'] * hist)
+    net_concept = np.sum((result['SW_cre'] + result['LW_cre']) * hist)
+    fig.text(0.8, 0.33, r" HCRE $\cdot$ P :", color='k', fontsize=11, fontweight='bold')
+    fig.text(0.8, 0.31, "ARTS:", color='k', fontsize=11)
+    fig.text(0.84, 0.31, f"SW: {sw_arts:.2f} W m$^{-2}$", color='blue', fontsize=11)
+    fig.text(0.84, 0.29, f"LW: {lw_arts:.2f} W m$^{-2}$", color='red', fontsize=11)
+    fig.text(0.84, 0.27, f"Net: {net_arts:.2f} W m$^{-2}$", color='k', fontsize=11)
+    fig.text(0.785, 0.25, "Concept:", color='k', fontsize=11)
+    fig.text(0.84, 0.25, f"SW: {sw_concept:.2f} W m$^{-2}$", color='blue', fontsize=11)
+    fig.text(0.84, 0.23, f"LW: {lw_concept:.2f} W m$^{-2}$", color='red', fontsize=11)
+    fig.text(0.84, 0.21, f"Net: {net_concept:.2f} W m$^{-2}$", color='k', fontsize=11)
 
     return fig, axes

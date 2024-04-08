@@ -11,7 +11,7 @@ from src.read_data import (
 from src.plot_functions import plot_model_output_arts, plot_connectedness, plot_sum_cre
 import pickle
 import os
-
+import xarray as xr
 
 # %% load data
 atms, fluxes_3d, fluxes_3d_noice = load_atms_and_fluxes()
@@ -20,10 +20,11 @@ lw_vars_avg, sw_vars_avg, lc_vars_avg = load_binned_derived_variables()
 parameters = load_parameters()
 cre_binned, cre_interpolated, cre_average = load_cre()
 const_lc_quantities = load_average_lc_parameters()
+atms_raw = xr.open_dataset("/work/bm1183/m301049/nextgems_profiles/monsoon/raw_data_converted.nc")
 
 
 path = '/work/bm1183/m301049/cm_results/'
-run = 'icon_mons_zero_lc'
+run = 'icon_mons_const_lc'
 
 with open(path + run + '.pkl', 'rb') as f:
     result = pickle.load(f)
@@ -57,10 +58,10 @@ ice_cld_cond = atms["IWC"] + atms["snow"] + atms["graupel"]
 mask = lw_vars["mask_height"] & (atms["IWP"] > 1e-6) & (atms["LWP"] > 1e-6)
 iwp_bins = np.logspace(-5, 1, 7)
 fig, axes = plot_connectedness(atms, mask, liq_cld_cond, ice_cld_cond, mode='arts')
-fig.savefig(f"plots/model_results/{run}/connectedness.png", dpi=300, bbox_inches="tight")
+fig.savefig(f"plots/model_results/{run}/connectedness.png", dpi=500, bbox_inches="tight")
 
 # %% Fold Distribution with CRE
-fig, axes = plot_sum_cre(result, atms, np.logspace(-5, 1, 50), mode='arts')
+fig, axes = plot_sum_cre(result, atms_raw.where(atms_raw['mask_height']), np.logspace(-5, 1, 50), mode='arts')
 fig.savefig(f'plots/model_results/{run}/cre_integrated.png', dpi=300, bbox_inches='tight')
 
-# %% 
+# %%
