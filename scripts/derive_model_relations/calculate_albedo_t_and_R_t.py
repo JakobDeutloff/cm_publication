@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from src.read_data import load_atms_and_fluxes
 from src.plot_functions import scatterplot
-from calc_variables import cut_data
+from src.helper_functions import cut_data
 from scipy.stats import linregress
 from scipy.interpolate import griddata
 from scipy.optimize import curve_fit
@@ -91,18 +91,26 @@ for ax in axes:
 fig.colorbar(pcol, label="Allsky Albedo", location="bottom", ax=axes[:], shrink=0.8)
 
 # %% average over SW albedo bins
+def time_correction(F1, F2):
+    return np.abs(np.arccos(F1) - np.arccos(F2))
+
+time_corr = np.zeros(len(SW_down_bins) - 1)
+SW_bins_normalized = SW_down_bins / SW_down_bins.max()
+for i in range(len(SW_down_bins) - 1):
+    time_corr[i] = time_correction(SW_bins_normalized[i], SW_bins_normalized[i+1])
+
 mean_allsky_albedo = np.zeros(len(LWP_points))
 mean_allsky_albedo_interp = np.zeros(len(LWP_points))
 SW_down = (SW_down_bins[1:] + SW_down_bins[:-1]) / 2  # center of SW bins
 for i in range(len(LWP_bins) - 1):
     nan_mask = ~np.isnan(binned_allsky_albedo[i, :])
     mean_allsky_albedo[i] = np.sum(
-        binned_allsky_albedo[i, :][nan_mask] * SW_down[nan_mask]
-    ) / np.sum(SW_down[nan_mask])
+        binned_allsky_albedo[i, :][nan_mask] * SW_down[nan_mask] * time_corr[nan_mask]
+    ) / np.sum(SW_down[nan_mask] * time_corr[nan_mask])
     nan_mask_interp = ~np.isnan(binned_allsky_albedo_interp[i, :])
     mean_allsky_albedo_interp[i] = np.sum(
-        binned_allsky_albedo_interp[i, :][nan_mask_interp] * SW_down[nan_mask_interp]
-    ) / np.sum(SW_down[nan_mask_interp])
+        binned_allsky_albedo_interp[i, :][nan_mask_interp] * SW_down[nan_mask_interp] * time_corr[nan_mask_interp]
+    ) / np.sum(SW_down[nan_mask_interp] * time_corr[nan_mask_interp])
 
 mean_lc_vars.index = LWP_points
 mean_lc_vars.index.name = "LWP"
@@ -159,7 +167,7 @@ ax.plot(mean_lc_vars["interpolated_albedo"], color="k", linestyle="-", label="Me
 ax.plot(LWP_points, logistic_curve, color="r", linestyle="--", label="Fit")
 ax.legend()
 fig.tight_layout()
-fig.savefig("plots/albedo_vs_LWP.png", dpi=300)
+#fig.savefig("plots/albedo_vs_LWP.png", dpi=300)
 
 # %% plot clearsky albedo
 

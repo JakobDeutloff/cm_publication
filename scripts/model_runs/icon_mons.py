@@ -28,7 +28,7 @@ SW_in = cut_data(fluxes_3d["clearsky_sw_down"]).isel(pressure=-1).mean().values
 
 # %% Set additional parameters
 parameters['threshold_lc_fraction'] = 1e-6
-parameters['lc_fraction'] = 0.16
+parameters['lc_fraction'] = 0.175
 
 # %% set mask ans bins 
 mask = lw_vars["mask_height"]

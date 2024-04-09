@@ -8,6 +8,7 @@ from scipy.interpolate import griddata
 from src.read_data import load_atms_and_fluxes
 from src.plot_functions import scatterplot
 from scipy.optimize import curve_fit
+import os
 
 # %% load  data
 atms, fluxes_3d, fluxes_3d_noice = load_atms_and_fluxes()
@@ -87,18 +88,26 @@ for ax in axes:
 fig.colorbar(pcol, label="High Cloud Albedo", location="bottom", ax=axes[:], shrink=0.8)
 
 # %% average over SW albedo bins
+def time_correction(F1, F2):
+    return np.abs(np.arccos(F1) - np.arccos(F2))
+
+time_corr = np.zeros(len(SW_down_bins) - 1)
+SW_bins_normalized = SW_down_bins / SW_down_bins.max()
+for i in range(len(SW_down_bins) - 1):
+    time_corr[i] = time_correction(SW_bins_normalized[i], SW_bins_normalized[i+1])
+
 mean_hc_albedo_SW = np.zeros(len(IWP_points))
 mean_hc_albedo_SW_interp = np.zeros(len(IWP_points))
 SW_down = (SW_down_bins[1:] + SW_down_bins[:-1]) / 2  # center of SW bins
 for i in range(len(IWP_bins) - 1):
     nan_mask = ~np.isnan(binned_hc_albedo[i, :])
     mean_hc_albedo_SW[i] = np.sum(
-        binned_hc_albedo[i, :][nan_mask] * SW_down[nan_mask]
-    ) / np.sum(SW_down[nan_mask])
+        binned_hc_albedo[i, :][nan_mask] * SW_down[nan_mask] * time_corr[nan_mask]
+    ) / np.sum(SW_down[nan_mask] * time_corr[nan_mask])
     nan_mask_interp = ~np.isnan(binned_hc_albedo_interp[i, :])
     mean_hc_albedo_SW_interp[i] = np.sum(
-        binned_hc_albedo_interp[i, :][nan_mask_interp] * SW_down[nan_mask_interp]
-    ) / np.sum(SW_down[nan_mask_interp])
+        binned_hc_albedo_interp[i, :][nan_mask_interp] * SW_down[nan_mask_interp] * time_corr[nan_mask_interp]
+    ) / np.sum(SW_down[nan_mask_interp] * time_corr[nan_mask_interp])
 
 
 mean_sw_vars.index = IWP_points
@@ -144,6 +153,9 @@ plt.show()
 
 # %% save coefficients as pkl file
 path = '/work/bm1183/m301049/icon_arts_processed/derived_quantities/'
+os.remove(path + "sw_vars.nc")
+os.remove(path + "hc_albedo_params.pkl")
+os.remove(path + 'mean_sw_vars.pkl')
 sw_vars.to_netcdf(path + "sw_vars.nc")
 
 with open(path + "hc_albedo_params.pkl", "wb") as f:

@@ -629,7 +629,11 @@ def plot_connectedness(sample, mask, liq_cld_cond, ice_cld_cond, mode="icon"):
     handles, labels = axes[0, 0].get_legend_handles_labels()
     handles2, labels2 = ax2.get_legend_handles_labels()
     fig.legend(
-        handles + handles2, labels + labels2, bbox_to_anchor=(0.5, 0.35), loc="lower center", ncols=7
+        handles + handles2,
+        labels + labels2,
+        bbox_to_anchor=(0.5, 0.35),
+        loc="lower center",
+        ncols=7,
     )
     if mode == "icon":
         axes[0, 0].set_ylabel("Model Level")
@@ -700,7 +704,7 @@ def plot_model_output_arts_fancy(
     f_lc_vals,
     lc_consts,
     cs_consts,
-    sample
+    sample,
 ):
     fig = plt.figure(figsize=(15, 10))
     mask_tuning = lw_vars["mask_height"] & lw_vars["mask_hc_no_lc"]
@@ -726,7 +730,7 @@ def plot_model_output_arts_fancy(
         s=0.1,
         color="grey",
     )
-    ax2.plot(lw_binned_vars["binned_emissivity"], color="k", label="Mean")
+    ax2.plot(lw_binned_vars["binned_emissivity"], color="orange", label="Mean")
     ax2.plot(result["em_hc"], color="red", label="Fitted Logistic", linestyle="--")
     ax2.set_ylabel(r"$\epsilon$")
     ax2.legend()
@@ -741,7 +745,7 @@ def plot_model_output_arts_fancy(
         c=cut_data(fluxes_3d_noice["allsky_sw_down"].isel(pressure=-1), mask_tuning),
         cmap="viridis",
     )
-    ax3.plot(sw_binned_vars["interpolated_albedo"], color="k", label="Mean")
+    ax3.plot(sw_binned_vars["interpolated_albedo"], color="orange", label="Mean")
     ax3.plot(result["alpha_hc"], color="red", linestyle="--", label="Fitted Logistic")
     ax3.set_ylabel(r"$\alpha$")
     ax3.legend()
@@ -756,7 +760,7 @@ def plot_model_output_arts_fancy(
         result["lc_fraction"],
         color="red",
         linestyle="--",
-        label="Mean",
+        label="Constant",
     )
     ax4.legend()
     ax4.set_ylabel(r"$f$")
@@ -780,11 +784,25 @@ def plot_model_output_arts_fancy(
         norm=LogNorm(vmin=1e-6, vmax=1e0),
         s=0.1,
     )
+    mean_rt = (
+        cut_data_mixed(
+            fluxes_3d_noice["clearsky_lw_up"].isel(pressure=-1),
+            fluxes_3d_noice["allsky_lw_up"].isel(pressure=-1),
+            lw_vars["mask_height"],
+            atms["connected"],
+        )
+        .groupby_bins(cut_data(atms["IWP"], lw_vars["mask_height"]), bins=IWP_bins)
+        .mean()
+    )
+    ax5.plot(IWP_points, mean_rt, color="orange", label="Mean")
     ax5.axhline(cs_consts["R_t"], color="grey", linestyle="--", label="Clearsky")
     ax5.axhline(lc_consts["R_t"], color="navy", linestyle="--", label="Low Cloud")
-    ax5.plot(result["R_t"], color="red", linestyle="--", label=r"Superposition + $C_{\mathrm{H_2O}}$")
+    ax5.plot(
+        result["R_t"], color="red", linestyle="--", label=r"Superposition + $C_{\mathrm{H_2O}}$"
+    )
     ax5.set_ylabel(r"$\mathrm{R_t}$ / $\mathrm{W ~ m^{-2}}$")
     ax5.legend()
+    ax5.set_ylim(-350, -200)
 
     # a_t
     ax6 = fig.add_subplot(3, 3, 6)
@@ -803,35 +821,45 @@ def plot_model_output_arts_fancy(
         norm=LogNorm(vmin=1e-6, vmax=1e0),
         s=0.1,
     )
-    ax6.axhline(cs_consts['a_t'], color="grey", linestyle="--", label="Clearsky")
-    ax6.axhline(lc_consts['a_t'], color="navy", linestyle="--", label="Low Cloud")
+    mean_a_t = (
+        cut_data_mixed(
+            fluxes_3d_noice["albedo_clearsky"],
+            fluxes_3d_noice["albedo_allsky"],
+            lw_vars["mask_height"],
+            atms["connected"],
+        )
+        .groupby_bins(cut_data(atms["IWP"], lw_vars["mask_height"]), bins=IWP_bins)
+        .mean()
+    )
+    ax6.plot(IWP_points, mean_a_t, color="orange", label="Mean")
+    ax6.axhline(cs_consts["a_t"], color="grey", linestyle="--", label="Clearsky")
+    ax6.axhline(lc_consts["a_t"], color="navy", linestyle="--", label="Low Cloud")
     ax6.plot(result["alpha_t"], color="red", linestyle="--", label="Superposition")
     ax6.set_ylabel(r"$\alpha_t$")
     ax6.legend()
 
-    # CRE 
+    # CRE
     ax7 = fig.add_subplot(3, 2, 5)
-    ax7.plot(cre_average['IWP'], cre_average['connected_sw'], color='blue', linestyle='--')
-    ax7.plot(cre_average['IWP'], cre_average['connected_lw'], color='red', linestyle='--')
-    ax7.plot(cre_average['IWP'], cre_average['connected_net'], color='black', linestyle='--')
-    ax7.plot(result['SW_cre'], color='blue', label='SW', linestyle='-')
-    ax7.plot(result['LW_cre'], color='red', label='LW', linestyle='-')
-    ax7.plot(result['SW_cre'] + result['LW_cre'], color='black', label='Net', linestyle='-')
-    ax7.set_ylabel('HCRE / W m$^{-2}$')
+    ax7.plot(cre_average["IWP"], cre_average["connected_sw"], color="blue", linestyle="--")
+    ax7.plot(cre_average["IWP"], cre_average["connected_lw"], color="red", linestyle="--")
+    ax7.plot(cre_average["IWP"], cre_average["connected_net"], color="black", linestyle="--")
+    ax7.plot(result["SW_cre"], color="blue", label="SW", linestyle="-")
+    ax7.plot(result["LW_cre"], color="red", label="LW", linestyle="-")
+    ax7.plot(result["SW_cre"] + result["LW_cre"], color="black", label="Net", linestyle="-")
+    ax7.set_ylabel("HCRE / W m$^{-2}$")
     handles, label = ax7.get_legend_handles_labels()
     # fake lines for legend
-    ax7.plot([], [], color='grey', linestyle='--', label='ARTS')
-    ax7.plot([], [], color='grey', linestyle='-', label='Concept')
+    ax7.plot([], [], color="grey", linestyle="--", label="ARTS")
+    ax7.plot([], [], color="grey", linestyle="-", label="Concept")
     ax7.legend()
-    
 
     # IWP histogram
     ax8 = fig.add_subplot(3, 2, 6)
     n_profiles = len(sample.lat) * len(sample.lon)
-    hist, edges = np.histogram(sample["IWP"].where(sample['mask_height']), bins=IWP_bins)
+    hist, edges = np.histogram(sample["IWP"].where(sample["mask_height"]), bins=IWP_bins)
     hist = hist / n_profiles
-    ax8.stairs(hist, edges, color='k')
-    ax8.set_ylabel(r'$P$')
+    ax8.stairs(hist, edges, color="k")
+    ax8.set_ylabel(r"$P$")
 
     axes = [ax1, ax2, ax3, ax4, ax5, ax6, ax7, ax8]
     for ax in axes:
@@ -841,39 +869,39 @@ def plot_model_output_arts_fancy(
         ax.set_title("")
         ax.set_xlabel("")
         ax.set_xticks([1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1e0, 1e1])
-        ax.set_xticklabels('')
+        ax.set_xticklabels("")
         ax.set_xlim(1e-5, 10)
 
-    ax4.set_xticklabels(['1e-5', '1e-4', '1e-3', '1e-2', '1e-1', '1e0', '1e1'])
-    ax5.set_xticklabels(['1e-5', '1e-4', '1e-3', '1e-2', '1e-1', '1e0', '1e1'])
-    ax6.set_xticklabels(['1e-5', '1e-4', '1e-3', '1e-2', '1e-1', '1e0', '1e1'])
+    ax4.set_xticklabels(["1e-5", "1e-4", "1e-3", "1e-2", "1e-1", "1e0", "1e1"])
+    ax5.set_xticklabels(["1e-5", "1e-4", "1e-3", "1e-2", "1e-1", "1e0", "1e1"])
+    ax6.set_xticklabels(["1e-5", "1e-4", "1e-3", "1e-2", "1e-1", "1e0", "1e1"])
     ax7.set_xlabel("Ice Water Path / kg m$^{-2}$")
-    ax7.set_xticklabels(['1e-5', '1e-4', '1e-3', '1e-2', '1e-1', '1e0', '1e1'])
+    ax7.set_xticklabels(["1e-5", "1e-4", "1e-3", "1e-2", "1e-1", "1e0", "1e1"])
     ax8.set_xlabel("Ice Water Path / kg m$^{-2}$")
-    ax8.set_xticklabels(['1e-5', '1e-4', '1e-3', '1e-2', '1e-1', '1e0', '1e1'])
+    ax8.set_xticklabels(["1e-5", "1e-4", "1e-3", "1e-2", "1e-1", "1e0", "1e1"])
 
-    # add colorbars 
+    # add colorbars
     fig.subplots_adjust(right=0.9)
     cbar_ax1 = fig.add_axes([0.91, 0.65, 0.01, 0.22])
     cbar_ax2 = fig.add_axes([0.91, 0.38, 0.01, 0.22])
-    fig.colorbar(sc_alpha, cax=cbar_ax1, label='SW Down / W m$^{-2}$')
-    fig.colorbar(sc_rt, cax=cbar_ax2, label='LWP / kg m$^{-2}$')
+    fig.colorbar(sc_alpha, cax=cbar_ax1, label="SW Down / W m$^{-2}$")
+    fig.colorbar(sc_rt, cax=cbar_ax2, label="LWP / kg m$^{-2}$")
 
-    # add folded CRE 
-    sw_arts = np.sum(cre_average['connected_sw'] * hist)
-    lw_arts = np.sum(cre_average['connected_lw'] * hist)
-    net_arts = np.sum(cre_average['connected_net'] * hist)
-    sw_concept = np.sum(result['SW_cre'] * hist)
-    lw_concept = np.sum(result['LW_cre'] * hist)
-    net_concept = np.sum((result['SW_cre'] + result['LW_cre']) * hist)
-    fig.text(0.8, 0.33, r" HCRE $\cdot$ P :", color='k', fontsize=11, fontweight='bold')
-    fig.text(0.8, 0.31, "ARTS:", color='k', fontsize=11)
-    fig.text(0.84, 0.31, f"SW: {sw_arts:.2f} W m$^{-2}$", color='blue', fontsize=11)
-    fig.text(0.84, 0.29, f"LW: {lw_arts:.2f} W m$^{-2}$", color='red', fontsize=11)
-    fig.text(0.84, 0.27, f"Net: {net_arts:.2f} W m$^{-2}$", color='k', fontsize=11)
-    fig.text(0.785, 0.25, "Concept:", color='k', fontsize=11)
-    fig.text(0.84, 0.25, f"SW: {sw_concept:.2f} W m$^{-2}$", color='blue', fontsize=11)
-    fig.text(0.84, 0.23, f"LW: {lw_concept:.2f} W m$^{-2}$", color='red', fontsize=11)
-    fig.text(0.84, 0.21, f"Net: {net_concept:.2f} W m$^{-2}$", color='k', fontsize=11)
+    # add folded CRE
+    sw_arts = np.sum(cre_average["connected_sw"] * hist)
+    lw_arts = np.sum(cre_average["connected_lw"] * hist)
+    net_arts = np.sum(cre_average["connected_net"] * hist)
+    sw_concept = np.sum(result["SW_cre"] * hist)
+    lw_concept = np.sum(result["LW_cre"] * hist)
+    net_concept = np.sum((result["SW_cre"] + result["LW_cre"]) * hist)
+    fig.text(0.8, 0.33, r" HCRE $\cdot$ P :", color="k", fontsize=11, fontweight="bold")
+    fig.text(0.8, 0.31, "ARTS:", color="k", fontsize=11)
+    fig.text(0.84, 0.31, f"SW: {sw_arts:.2f} W m$^{-2}$", color="blue", fontsize=11)
+    fig.text(0.84, 0.29, f"LW: {lw_arts:.2f} W m$^{-2}$", color="red", fontsize=11)
+    fig.text(0.84, 0.27, f"Net: {net_arts:.2f} W m$^{-2}$", color="k", fontsize=11)
+    fig.text(0.785, 0.25, "Concept:", color="k", fontsize=11)
+    fig.text(0.84, 0.25, f"SW: {sw_concept:.2f} W m$^{-2}$", color="blue", fontsize=11)
+    fig.text(0.84, 0.23, f"LW: {lw_concept:.2f} W m$^{-2}$", color="red", fontsize=11)
+    fig.text(0.84, 0.21, f"Net: {net_concept:.2f} W m$^{-2}$", color="k", fontsize=11)
 
     return fig, axes

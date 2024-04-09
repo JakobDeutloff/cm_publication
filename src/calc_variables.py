@@ -7,6 +7,7 @@ import xarray as xr
 from scipy.interpolate import griddata
 from tqdm import tqdm
 
+
 def calc_cre(fluxes_toa, fluxes_toa_noice=None, mode="clearsky"):
 
     cre = xr.Dataset(coords={"lat": fluxes_toa.lat, "lon": fluxes_toa.lon})
@@ -119,6 +120,7 @@ def bin_and_average_cre(cre, IWP_bins, lon_bins, atms, modus="ice_only"):
 
     return cre_arr, interp_cre, interp_cre_average
 
+
 def calc_connected(atms, frac_no_cloud=0.05, rain=True, convention="icon"):
     """
     defines for all profiles with ice above liquid whether
@@ -171,7 +173,9 @@ def calc_connected(atms, frac_no_cloud=0.05, rain=True, convention="icon"):
         lat_valid = lat[mask_both_clds]
         lon_valid = lon[mask_both_clds]
     elif convention == "icon_binned":
-        sw, iwp, profile = np.meshgrid(mask_both_clds.sw, mask_both_clds.iwp, mask_both_clds.profile)
+        sw, iwp, profile = np.meshgrid(
+            mask_both_clds.sw, mask_both_clds.iwp, mask_both_clds.profile
+        )
         iwp_valid = iwp[mask_both_clds]
         sw_valid = sw[mask_both_clds]
         profile_valid = profile[mask_both_clds]
@@ -226,7 +230,9 @@ def calc_connected(atms, frac_no_cloud=0.05, rain=True, convention="icon"):
             # high and low clouds are not connected if there is a 1-cell deep layer without cloud
             for j in range(len(cld_range.level_full)):
                 if cld_range.isel(level_full=j).sum() == 0:
-                    connected.loc[dict(sw=sw_valid[i], iwp=iwp_valid[i], profile=profile_valid[i])] = 0
+                    connected.loc[
+                        dict(sw=sw_valid[i], iwp=iwp_valid[i], profile=profile_valid[i])
+                    ] = 0
                     break
 
     return connected
@@ -287,13 +293,23 @@ def calculate_lc_fraction(atms):
     return lc_fraction
 
 
-def calculate_IWC_cumsum(atms):
+def calculate_IWC_cumsum(atms, convention="icon"):
     """
     Calculate the vertically integrated ice water content.
     """
+    if convention == "icon":
+        cell_height = atms["dzghalf"]
+        ice_mass = (atms["IWC"] + atms["graupel"] + atms["snow"]) * cell_height
+        IWC_cumsum = ice_mass.cumsum('level_full')
+    elif convention == "arts":
+        cell_height = calc_cell_height(atms)
+        # pressure coordinate needs to be reversed for cumsum
+        ice_mass = ((atms["IWC"] + atms["graupel"] + atms["snow"]) * cell_height).reindex(
+            pressure=list(reversed(atms.pressure))
+        )
+        IWC_cumsum = ice_mass.cumsum("pressure").reindex(pressure=list(reversed(atms.pressure)))
 
-    ice_mass = (atms["IWC"] + atms["graupel"] + atms["snow"]) * atms["dzghalf"]
-    IWC_cumsum = ice_mass.cumsum("level_full")
+
     IWC_cumsum.attrs = {
         "units": "kg m^-2",
         "long_name": "Cumulative Ice Water Content",
@@ -301,18 +317,27 @@ def calculate_IWC_cumsum(atms):
     return IWC_cumsum
 
 
-def calculate_h_cloud_temperature(atms, IWP_emission=8e-3):
+def calculate_h_cloud_temperature(atms, IWP_emission=8e-3, convention="icon"):
     """
     Calculate the temperature of high clouds.
     """
-    top_idx_thin = (atms["IWC"] + atms["snow"] + atms["graupel"]).argmax("level_full")
-    top_idx_thick = np.abs(atms["IWC_cumsum"] - IWP_emission).argmin("level_full")
+    if convention == "icon":
+        vert_coord = "level_full"
+    elif convention == "arts":
+        vert_coord = "pressure"
+    top_idx_thin = (atms["IWC"] + atms["snow"] + atms["graupel"]).argmax(vert_coord)
+    top_idx_thick = np.abs(atms["IWC_cumsum"] - IWP_emission).argmin(vert_coord)
     top_idx = xr.where(top_idx_thick < top_idx_thin, top_idx_thick, top_idx_thin)
-    top = atms.isel(level_full=top_idx).level_full
-    T_h = atms["temperature"].sel(level_full=top)
+    if convention == "icon":
+        top = atms.isel(level_full=top_idx).level_full
+        T_h = atms["temperature"].sel(level_full=top)
+    elif convention == "arts":
+        top = atms.isel(pressure=top_idx).pressure
+        T_h = atms["temperature"].sel(pressure=top)
     T_h.attrs = {"units": "K", "long_name": "High Cloud Top Temperature"}
     top.attrs = {"units": "1", "long_name": "Level Index of High CLoud Top"}
     return T_h, top
+
 
 def calc_dry_air_properties(ds):
     """
@@ -326,7 +351,7 @@ def calc_dry_air_properties(ds):
     """
 
     # Dry Air density
-    rho_air= ds.pfull / ds.ta / 287.04
+    rho_air = ds.pfull / ds.ta / 287.04
     rho_air.attrs = {"units": "kg/m^3", "long_name": "dry air density"}
     # Dry air specific mass
     dry_air = 1 - (ds.cli + ds.clw + ds.qs + ds.qg + ds.qr + ds.hus)
@@ -350,12 +375,15 @@ def convert_to_density(ds, key):
     var.attrs["units"] = "kg/m^3"
     return var
 
+
 def calc_cf(ds):
     """
     Calculate cloud fraction from cloud ice and cloud liquid water content
     If cloud condensate exceeds 10^-6 kg/m^3, it is set to 1, otherwise to 0.
     """
-    cf = ((ds["IWC"] + ds["LWC"] + ds['rain'] + ds['snow'] + ds['graupel']) > 5 * 10 ** (-9)).astype(int)
+    cf = (
+        (ds["IWC"] + ds["LWC"] + ds["rain"] + ds["snow"] + ds["graupel"]) > 5 * 10 ** (-9)
+    ).astype(int)
     cf.attrs = {
         "component": "atmo",
         "grid_mapping": "crs",

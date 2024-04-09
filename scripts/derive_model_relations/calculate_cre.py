@@ -4,6 +4,7 @@ import xarray as xr
 import matplotlib.pyplot as plt
 from src.calc_variables import calc_cre, bin_and_average_cre
 from src.read_data import load_atms_and_fluxes, load_derived_vars
+import os
 
 # %% load  data
 atms, fluxes_3d, fluxes_3d_noice = load_atms_and_fluxes()
@@ -293,6 +294,10 @@ cre_interpolated_average_xr["connected_lw"] = xr.DataArray(
 cre_interpolated_average_xr = cre_interpolated_average_xr.assign_coords({"IWP_bins": IWP_bins})
 
 path = "/work/bm1183/m301049/icon_arts_processed/derived_quantities/"
+os.remove(path + "cre.nc")
+os.remove(path + "cre_binned.nc")
+os.remove(path + "cre_interpolated.nc")
+os.remove(path + "cre_interpolated_average.nc")
 cre_xr.to_netcdf(path + "cre.nc")
 cre_binned_xr.to_netcdf(path + "cre_binned.nc")
 cre_interpolated_xr.to_netcdf(path + "cre_interpolated.nc")
