@@ -173,4 +173,95 @@ for ax in axes:
 
 fig.savefig("plots/paper/cloud_profile_iwp.png", dpi=500, bbox_inches="tight")
 
+# %% plot just CRE and IWP dist and folded cre for poster 
+
+def control_plot(ax):
+    ax.set_xlim(1e-5, 10)
+    ax.set_xticks([1e1, 1e0, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5])
+    ax.spines[["top", "right"]].set_visible(False)
+
+fig, axes = plt.subplots(2, 1, figsize=(9, 11), sharex=True, gridspec_kw={"height_ratios": [2, 1]})
+
+# CRE 
+axes[0].axhline(0, color="grey", linestyle="--")
+axes[0].plot(
+    cre_interpolated_average.IWP,
+    cre_interpolated_average["connected_sw"],
+    label="SW",
+    color="blue",
+    linestyle="--",
+)
+axes[0].plot(
+    cre_interpolated_average.IWP,
+    cre_interpolated_average["connected_lw"],
+    label="LW",
+    color="red",
+    linestyle="--",
+)
+axes[0].plot(
+    cre_interpolated_average.IWP,
+    cre_interpolated_average["connected_net"],
+    label="Net",
+    color="k",
+    linestyle="--",
+)
+axes[0].plot(result.index, result["SW_cre"], color="blue")
+axes[0].plot(result.index, result["LW_cre"], color="red")
+axes[0].plot(result.index, result["SW_cre"] + result["LW_cre"], color="k")
+axes[0].plot(np.linspace(1 - 6, cre_interpolated_average.IWP.min(), 100), np.zeros(100), color="k")
+axes[0].plot([], [], color="grey", linestyle="--", label="ARTS")
+axes[0].plot([], [], color="grey", linestyle="-", label="Concept")
+axes[0].set_ylabel("HCRE / W m$^{-2}$")  
+
+# IWP dist
+axes[1].stairs(hist, edges, label="IWP", color="black")
+axes[1].set_xscale("log")
+axes[1].set_ylabel("P")
+axes[1].set_xlabel("Ice Water Path / kgm$^{-2}$")
+
+
+
+# # weighted CRE
+# axes[2].axhline(0, color="grey", linestyle="--")
+# axes[2].plot(cre_interpolated_average.IWP, weighted_sw, color="blue", linestyle="--")
+# axes[2].plot(cre_interpolated_average.IWP, weighted_lw, color="red", linestyle="--")
+# axes[2].plot(cre_interpolated_average.IWP, weighted_net, color="k", linestyle="--")
+# axes[2].plot(cre_interpolated_average.IWP, weighted_sw_cm, label="SW", color="blue")
+# axes[2].plot(cre_interpolated_average.IWP, weighted_lw_cm, label="LW", color="red")
+# axes[2].plot(cre_interpolated_average.IWP, weighted_net_cm, label="Net", color="k")
+# axes[2].plot(np.linspace(1 - 6, cre_interpolated_average.IWP.min(), 100), np.zeros(100), color="k")
+# axes[2].set_ylabel("HCRE $\cdot$ P / W m$^{-2}$")
+# axes[2].set_xlabel("IWP / kgm$^{-2}$")
+# axes[2].plot([], [], color="grey", linestyle="--", label="ARTS")
+# axes[2].plot([], [], color="grey", linestyle="-", label="Concept")
+
+fig.subplots_adjust(bottom=0.3)
+fig.text(0.1, 0.12, r"$\sum_{IWP}$ HCRE $\cdot$ P :", color="black", fontsize=12)
+fig.text(0.3, 0.12, "ARTS", color='k') 
+fig.text(0.3, 0.1, f"SW: {weighted_sw.sum():.2f} W/m$^2$", color="blue")
+fig.text(0.3, 0.08, f"LW: {weighted_lw.sum():.2f} W/m$^2$", color="red")
+fig.text(0.3, 0.06, f"Net: {weighted_net.sum():.2f} W/m$^2$", color="black")
+fig.text(0.55, 0.12, "Concept", color='k')
+fig.text(0.55, 0.1, f"SW: {weighted_sw_cm.sum():.2f} W/m$^2$", color="blue")
+fig.text(0.55, 0.08, f"LW: {weighted_lw_cm.sum():.2f} W/m$^2$", color="red")
+fig.text(0.55, 0.06, f"Net: {weighted_net_cm.sum():.2f} W/m$^2$", color="black")
+
+for ax in axes:
+    control_plot(ax)
+
+# add legend 
+handles, labels = axes[0].get_legend_handles_labels()
+fig.legend(
+    labels=labels,
+    handles=handles,
+    bbox_to_anchor=(0.78, 0.24),
+    ncols=5
+)
+
+fig.savefig("plots/paper/cre_weighting.png", dpi=500, bbox_inches="tight")
+
+
+
+
+
 # %%

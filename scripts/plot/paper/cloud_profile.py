@@ -112,7 +112,6 @@ for ax in axes:
     ax.set_xticks([1e1, 1e0, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5])
     ax.set_xscale("log")
 
-fig.savefig("plots/paper/cloud_profile.svg", bbox_inches="tight")
 fig.savefig("plots/paper/cloud_profile.png", dpi=500, bbox_inches="tight")
 
 
