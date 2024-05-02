@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 
 # %% load data
-path = "/work/bm1183/m301049/icon_arts_processed/fullrange_flux_test1deg/"
+path = "/work/bm1183/m301049/icon_arts_processed/fullrange_flux_mid1deg_fast/"
 
 atms = pickle.load(open(path + "atms.pkl", "rb"))
 results = pickle.load(open(path + "results.pkl", "rb"))

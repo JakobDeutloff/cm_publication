@@ -173,11 +173,11 @@ def calc_connected(atms, frac_no_cloud=0.05, rain=True, convention="icon"):
         lat_valid = lat[mask_both_clds]
         lon_valid = lon[mask_both_clds]
     elif convention == "icon_binned":
-        sw, iwp, profile = np.meshgrid(
-            mask_both_clds.sw, mask_both_clds.iwp, mask_both_clds.profile
+        time, iwp, profile = np.meshgrid(
+            mask_both_clds.local_time_points, mask_both_clds.iwp_points, mask_both_clds.profile
         )
         iwp_valid = iwp[mask_both_clds]
-        sw_valid = sw[mask_both_clds]
+        time_valid = time[mask_both_clds]
         profile_valid = profile[mask_both_clds]
 
     # create connectedness array
@@ -220,18 +220,18 @@ def calc_connected(atms, frac_no_cloud=0.05, rain=True, convention="icon"):
                     break
 
         elif convention == "icon_binned":
-            liq_point = liq.sel(sw=sw_valid[i], iwp=iwp_valid[i], profile=profile_valid[i])
-            ice_point = ice.sel(sw=sw_valid[i], iwp=iwp_valid[i], profile=profile_valid[i])
+            liq_point = liq.sel(local_time_points=time_valid[i], iwp_points=iwp_valid[i], profile=profile_valid[i])
+            ice_point = ice.sel(local_time_points=time_valid[i], iwp_points=iwp_valid[i], profile=profile_valid[i])
             p_top_idx = ice_point.argmax(vert_coord).values
             p_bot_idx = liq_point.argmax(vert_coord).values
-            cld_range = no_cld.sel(sw=sw_valid[i], iwp=iwp_valid[i], profile=profile_valid[i]).isel(
+            cld_range = no_cld.sel(local_time_points=time_valid[i], iwp_points=iwp_valid[i], profile=profile_valid[i]).isel(
                 level_full=slice(p_top_idx, p_bot_idx)
             )
             # high and low clouds are not connected if there is a 1-cell deep layer without cloud
             for j in range(len(cld_range.level_full)):
                 if cld_range.isel(level_full=j).sum() == 0:
                     connected.loc[
-                        dict(sw=sw_valid[i], iwp=iwp_valid[i], profile=profile_valid[i])
+                        dict(local_time_points=time_valid[i], iwp_points=iwp_valid[i], profile=profile_valid[i])
                     ] = 0
                     break
 

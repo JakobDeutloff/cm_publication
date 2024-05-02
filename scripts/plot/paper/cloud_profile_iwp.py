@@ -6,6 +6,12 @@ import xarray as xr
 from src.read_data import load_cre
 import pickle
 
+# %%
+def control_plot(ax):
+    ax.set_xlim(1e-5, 10)
+    ax.set_xticks([1e1, 1e0, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5])
+    ax.spines[["top", "right"]].set_visible(False)
+
 # %% load data
 cre_binned, cre_interpolated, cre_interpolated_average = load_cre()
 ds = xr.open_dataset(
@@ -174,12 +180,6 @@ for ax in axes:
 fig.savefig("plots/paper/cloud_profile_iwp.png", dpi=500, bbox_inches="tight")
 
 # %% plot just CRE and IWP dist and folded cre for poster 
-
-def control_plot(ax):
-    ax.set_xlim(1e-5, 10)
-    ax.set_xticks([1e1, 1e0, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5])
-    ax.spines[["top", "right"]].set_visible(False)
-
 fig, axes = plt.subplots(2, 1, figsize=(9, 11), sharex=True, gridspec_kw={"height_ratios": [2, 1]})
 
 # CRE 
@@ -205,9 +205,9 @@ axes[0].plot(
     color="k",
     linestyle="--",
 )
-axes[0].plot(result.index, result["SW_cre"], color="blue")
-axes[0].plot(result.index, result["LW_cre"], color="red")
-axes[0].plot(result.index, result["SW_cre"] + result["LW_cre"], color="k")
+#axes[0].plot(result.index, result["SW_cre"], color="blue")
+#axes[0].plot(result.index, result["LW_cre"], color="red")
+#axes[0].plot(result.index, result["SW_cre"] + result["LW_cre"], color="k")
 axes[0].plot(np.linspace(1 - 6, cre_interpolated_average.IWP.min(), 100), np.zeros(100), color="k")
 axes[0].plot([], [], color="grey", linestyle="--", label="ARTS")
 axes[0].plot([], [], color="grey", linestyle="-", label="Concept")
@@ -258,10 +258,7 @@ fig.legend(
     ncols=5
 )
 
-fig.savefig("plots/paper/cre_weighting.png", dpi=500, bbox_inches="tight")
-
-
-
+fig.savefig("plots/paper/cre_weighting_talk.png", dpi=500, bbox_inches="tight")
 
 
 # %%
