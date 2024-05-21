@@ -72,12 +72,12 @@ def binning(IWP_bins, data, IWP):
         Binned data.
     """
     if type(data) == float or type(data) == np.float64:
-        return data 
+        return data
     else:
         return data.groupby_bins(IWP, IWP_bins).mean()
 
 
-def calc_hc_albedo(IWP, alpha_hc_params):
+def calc_ice_albedo(IWP, alpha_hc_params):
     """
     Calculates the high-cloud albedo.
 
@@ -95,6 +95,48 @@ def calc_hc_albedo(IWP, alpha_hc_params):
     """
     fitted_vals = logistic(np.log10(IWP), *alpha_hc_params, 0)
     return fitted_vals
+
+
+def calc_mixed_albedo(alpha_ice, alpha_liq):
+    """
+    Calculates the mixed albedo.
+
+    PARAMETERS:
+    ---------------------------
+    alpha_ice: array-like
+        High cloud albedo.
+    alpha_liq: array-like
+        Low cloud albedo.
+
+    RETURNS:
+    ---------------------------
+    mixed_albedo: array-like
+        Mixed albedo.
+    """
+    mixed_albedo = alpha_ice + alpha_liq - (alpha_liq * alpha_ice)
+    return mixed_albedo
+
+
+def calc_hc_albedo(alpha_ice, alpha_mixed, delta_f):
+    """
+    Calculates the high-cloud albedo.
+
+    PARAMETERS:
+    ---------------------------
+    alpha_ice: array-like
+        High cloud albedo.
+    alpha_mixed: array-like
+        Mixed albedo.
+    delta_f: array-like
+        Delta f.
+
+    RETURNS:
+    ---------------------------
+    high_cloud_albedo: array-like
+        High cloud albedo.
+    """
+    high_cloud_albedo = (1 - delta_f) * alpha_ice + delta_f * alpha_mixed
+    return high_cloud_albedo
 
 
 def calc_hc_emissivity(IWP, em_hc_params):
@@ -253,6 +295,7 @@ def hc_lw_cre(em_hc, T_h, R_t, sigma):
     """
     return em_hc * ((-1 * sigma * T_h**4) - R_t)
 
+
 def ac_sw_cre(alpha_cs, alpha_t, alpha_hc, SW_in):
     """
     Calculates the SW CRE of the entire cloud population (hc + lc).
@@ -273,7 +316,10 @@ def ac_sw_cre(alpha_cs, alpha_t, alpha_hc, SW_in):
     SW_cre: array-like
         SW CRE of the high clouds.
     """
-    return -SW_in * (alpha_hc + (alpha_t * (1 - alpha_hc) ** 2) / (1 - alpha_t * alpha_hc) - alpha_cs)
+    return -SW_in * (
+        alpha_hc + (alpha_t * (1 - alpha_hc) ** 2) / (1 - alpha_t * alpha_hc) - alpha_cs
+    )
+
 
 def ac_lw_cre(emm_hc, T_h, R_t, R_cs, h20_corr, sigma):
     """
@@ -299,7 +345,7 @@ def ac_lw_cre(emm_hc, T_h, R_t, R_cs, h20_corr, sigma):
     LW_cre: array-like
         LW CRE of the high clouds.
     """
-    return  (1 - emm_hc) * R_t - emm_hc * sigma * T_h**4 - (R_cs + h20_corr)
+    return (1 - emm_hc) * R_t - emm_hc * sigma * T_h**4 - (R_cs + h20_corr)
 
 
 def run_model(
@@ -314,6 +360,7 @@ def run_model(
     parameters,
     const_lc_quantities=None,
     prescribed_lc_quantities=None,
+    liquid_in_albedo=False,
 ):
     """
     Runs the HC Model with given input data and parameters.
@@ -351,9 +398,9 @@ def run_model(
 
     IWP_points = (IWP_bins[1:] + IWP_bins[:-1]) / 2
 
-    # calculate lc fraction if needed 
+    # calculate lc fraction if needed
     if parameters["lc_fraction"] is None:
-        lc_fraction = calc_lc_fraction(LWP, connected=connectedness, fix_val=parameters["lc_fraction"])
+        lc_fraction = calc_lc_fraction(LWP, connected=connectedness)
     else:
         lc_fraction = parameters["lc_fraction"]
 
@@ -361,7 +408,6 @@ def run_model(
     T_hc_binned = binning(IWP_bins, T_hc, IWP)
     LWP_binned = binning(IWP_bins, LWP.where(LWP > 1e-4), IWP)
     lc_fraction_binned = binning(IWP_bins, lc_fraction, IWP)
-    
 
     # calculate radiative properties below high clouds
     alpha_t = calc_alpha_t(
@@ -384,7 +430,17 @@ def run_model(
     )
 
     # calculate radiative properties of high clouds
-    alpha_hc = calc_hc_albedo(IWP_points, parameters["alpha_hc"])
+
+    if liquid_in_albedo:
+        lc_fraction_raw = calc_lc_fraction(LWP, connected=0)
+        delta_f = lc_fraction_raw - lc_fraction
+        delta_f_binned = binning(IWP_bins, delta_f, IWP)
+        alpha_ice = calc_ice_albedo(IWP_points, parameters["alpha_hc"])
+        alpha_mixed = calc_mixed_albedo(alpha_ice, const_lc_quantities["a_t"])
+        alpha_hc = calc_hc_albedo(alpha_ice, alpha_mixed, delta_f_binned)
+    else:
+        alpha_hc = calc_ice_albedo(IWP_points, parameters["alpha_hc"])
+
     em_hc = calc_hc_emissivity(IWP_points, parameters["em_hc"])
 
     # calculate HCRE

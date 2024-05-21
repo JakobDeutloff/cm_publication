@@ -24,7 +24,7 @@ atms_raw = xr.open_dataset("/work/bm1183/m301049/nextgems_profiles/monsoon/raw_d
 
 
 path = '/work/bm1183/m301049/cm_results/'
-run = 'icon_mons_const_lc'
+run = 'icon_mons_const_lc_mixed'
 
 with open(path + run + '.pkl', 'rb') as f:
     result = pickle.load(f)

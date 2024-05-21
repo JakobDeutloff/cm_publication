@@ -77,7 +77,7 @@ weighted_lw_cm = result["LW_cre"] * hist
 weighted_net_cm = weighted_sw_cm + weighted_lw_cm
 
 # %% plot cloud occurence vs IWP percentiles
-fig, axes = plt.subplots(4, 1, figsize=(7, 12), height_ratios=[2, 1, 1, 1], sharex=True)
+fig, axes = plt.subplots(4, 1, figsize=(9, 12), height_ratios=[3, 1, 1, 1], sharex=True)
 
 # plot cloud fraction
 cf = axes[0].contourf(
@@ -93,67 +93,43 @@ axes[0].invert_yaxis()
 axes[0].set_ylabel("Pressure / hPa")
 axes[0].set_yticks([1000, 600, 200])
 
-# plot IWP dist
-axes[1].stairs(hist, edges, label="IWP", color="black")
-axes[1].set_xscale("log")
-axes[1].set_ylabel("P")
-
 # plot CRE
-axes[2].axhline(0, color="grey", linestyle="--")
-axes[2].plot(
+axes[1].axhline(0, color="grey", linestyle="--")
+axes[1].plot(
     cre_interpolated_average.IWP,
     cre_interpolated_average["connected_sw"],
     label="SW",
     color="blue",
-    linestyle="--",
+    linestyle="-",
 )
-axes[2].plot(
+axes[1].plot(
     cre_interpolated_average.IWP,
     cre_interpolated_average["connected_lw"],
     label="LW",
     color="red",
-    linestyle="--",
+    linestyle="-",
 )
-axes[2].plot(
+axes[1].plot(
     cre_interpolated_average.IWP,
     cre_interpolated_average["connected_net"],
     label="Net",
     color="k",
-    linestyle="--",
+    linestyle="-",
 )
-axes[2].plot(result.index, result["SW_cre"], color="blue")
-axes[2].plot(result.index, result["LW_cre"], color="red")
-axes[2].plot(result.index, result["SW_cre"] + result["LW_cre"], color="k")
-axes[2].plot(np.linspace(1 - 6, cre_interpolated_average.IWP.min(), 100), np.zeros(100), color="k")
-axes[2].axhline(0, color="grey", linestyle="--")
-axes[2].set_ylabel("HCRE / W m$^{-2}$")
+axes[1].plot(np.linspace(1 - 6, cre_interpolated_average.IWP.min(), 100), np.ones(100)*cre_interpolated_average['connected_net'][0].values, color="k")
+axes[1].set_ylabel("HCRE / W m$^{-2}$")
+
+# plot IWP dist
+axes[2].stairs(hist, edges, label="IWP", color="black")
+axes[2].set_xscale("log")
+axes[2].set_ylabel("P")
 
 
 # plot weighted CRE
-axes[3].plot(cre_interpolated_average.IWP, weighted_sw, color="blue", linestyle="--")
-axes[3].plot(cre_interpolated_average.IWP, weighted_lw, color="red", linestyle="--")
-axes[3].plot(cre_interpolated_average.IWP, weighted_net, color="k", linestyle="--")
-axes[3].plot(cre_interpolated_average.IWP, weighted_sw_cm, label="SW", color="blue")
-axes[3].plot(cre_interpolated_average.IWP, weighted_lw_cm, label="LW", color="red")
-axes[3].plot(cre_interpolated_average.IWP, weighted_net_cm, label="Net", color="k")
+axes[3].plot(cre_interpolated_average.IWP, weighted_net.cumsum("IWP"), color="k", linestyle="-")
 axes[3].plot(np.linspace(1 - 6, cre_interpolated_average.IWP.min(), 100), np.zeros(100), color="k")
-axes[3].axhline(0, color="grey", linestyle="--")
-axes[3].plot([], [], color="grey", linestyle="--", label="ARTS")
-axes[3].plot([], [], color="grey", linestyle="-", label="Concept")
 axes[3].set_xlabel("IWP / kgm$^{-2}$")
-axes[3].set_ylabel("HCRE $\cdot$ P / W m$^{-2}$")
-
-# plot sum of CRE
-fig.subplots_adjust(bottom=0.2)
-fig.text(0.1, 0.12, r"$\sum_{IWP}$ HCRE $\cdot$ P :", color="black", fontsize=12)
-fig.text(0.3, 0.12, "ARTS", color='k') 
-fig.text(0.3, 0.1, f"SW: {weighted_sw.sum():.2f} W/m$^2$", color="blue")
-fig.text(0.3, 0.08, f"LW: {weighted_lw.sum():.2f} W/m$^2$", color="red")
-fig.text(0.3, 0.06, f"Net: {weighted_net.sum():.2f} W/m$^2$", color="black")
-fig.text(0.55, 0.12, "Concept", color='k')
-fig.text(0.55, 0.1, f"SW: {weighted_sw_cm.sum():.2f} W/m$^2$", color="blue")
-fig.text(0.55, 0.08, f"LW: {weighted_lw_cm.sum():.2f} W/m$^2$", color="red")
-fig.text(0.55, 0.06, f"Net: {weighted_net_cm.sum():.2f} W/m$^2$", color="black")
+axes[3].set_ylabel(r"$\sum_{IWP=0}^{x}C$ / W m$^{-2}$")
 
 # add colorbar
 fig.subplots_adjust(right=0.8)

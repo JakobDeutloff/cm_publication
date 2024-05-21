@@ -89,13 +89,12 @@ def logistic(x, L, x0, k):
 
 x = np.log10(IWP_points)
 y = mean_lw_vars["binned_emissivity"].copy()
-y[IWP_points > 1e-1] = 1
+y[y>1] = 1
 nan_mask = ~np.isnan(y)
 x = x[nan_mask]
 y = y[nan_mask]
 
 popt, pcov = curve_fit(logistic, x, y)
-popt[0] = 1
 logistic_curve = logistic(np.log10(IWP_points), *popt)
 
 # %% plot mean hv emissivity in scatterplot with IWP
