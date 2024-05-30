@@ -77,7 +77,7 @@ weighted_lw_cm = result["LW_cre"] * hist
 weighted_net_cm = weighted_sw_cm + weighted_lw_cm
 
 # %% plot cloud occurence vs IWP percentiles
-fig, axes = plt.subplots(4, 1, figsize=(9, 12), height_ratios=[3, 1, 1, 1], sharex=True)
+fig, axes = plt.subplots(3, 1, figsize=(9, 10), height_ratios=[2, 1, 1], sharex=True)
 
 # plot cloud fraction
 cf = axes[0].contourf(
@@ -124,25 +124,18 @@ axes[2].stairs(hist, edges, label="IWP", color="black")
 axes[2].set_xscale("log")
 axes[2].set_ylabel("P")
 
-
-# plot weighted CRE
-axes[3].plot(cre_interpolated_average.IWP, weighted_net.cumsum("IWP"), color="k", linestyle="-")
-axes[3].plot(np.linspace(1 - 6, cre_interpolated_average.IWP.min(), 100), np.zeros(100), color="k")
-axes[3].set_xlabel("IWP / kgm$^{-2}$")
-axes[3].set_ylabel(r"$\sum_{IWP=0}^{x}C$ / W m$^{-2}$")
-
 # add colorbar
 fig.subplots_adjust(right=0.8)
-cax = fig.add_axes([0.85, 0.64, 0.02, 0.24])
+cax = fig.add_axes([0.84, 0.54, 0.02, 0.34])
 cb = fig.colorbar(cf, cax=cax, label="Cloud Cover")
 cb.set_ticks([0.1, 0.4, 0.7, 1])
 
 # add legend for axes[1]
-handles, labels = axes[3].get_legend_handles_labels()
+handles, labels = axes[1].get_legend_handles_labels()
 fig.legend(
     labels=labels,
     handles=handles,
-    bbox_to_anchor=(0.97, 0.469),
+    bbox_to_anchor=(0.92, 0.468),
     frameon=False,
 )
 
@@ -153,10 +146,12 @@ for ax in axes:
     ax.set_xticks([1e1, 1e0, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5])
     ax.set_xscale("log")
 
+axes[2].set_xlabel("Ice Water Path / kg m$^{-2}$")
+
 fig.savefig("plots/paper/cloud_profile_iwp.png", dpi=500, bbox_inches="tight")
 
-# %% plot just CRE and IWP dist and folded cre for poster 
-fig, axes = plt.subplots(2, 1, figsize=(9, 11), sharex=True, gridspec_kw={"height_ratios": [2, 1]})
+# %% plot just CRE and IWP dist for poster 
+fig, axes = plt.subplots(2, 1, figsize=(6, 5), sharex=True, gridspec_kw={"height_ratios": [2, 1]})
 
 # CRE 
 axes[0].axhline(0, color="grey", linestyle="--")
@@ -195,33 +190,6 @@ axes[1].set_xscale("log")
 axes[1].set_ylabel("P")
 axes[1].set_xlabel("Ice Water Path / kgm$^{-2}$")
 
-
-
-# # weighted CRE
-# axes[2].axhline(0, color="grey", linestyle="--")
-# axes[2].plot(cre_interpolated_average.IWP, weighted_sw, color="blue", linestyle="--")
-# axes[2].plot(cre_interpolated_average.IWP, weighted_lw, color="red", linestyle="--")
-# axes[2].plot(cre_interpolated_average.IWP, weighted_net, color="k", linestyle="--")
-# axes[2].plot(cre_interpolated_average.IWP, weighted_sw_cm, label="SW", color="blue")
-# axes[2].plot(cre_interpolated_average.IWP, weighted_lw_cm, label="LW", color="red")
-# axes[2].plot(cre_interpolated_average.IWP, weighted_net_cm, label="Net", color="k")
-# axes[2].plot(np.linspace(1 - 6, cre_interpolated_average.IWP.min(), 100), np.zeros(100), color="k")
-# axes[2].set_ylabel("HCRE $\cdot$ P / W m$^{-2}$")
-# axes[2].set_xlabel("IWP / kgm$^{-2}$")
-# axes[2].plot([], [], color="grey", linestyle="--", label="ARTS")
-# axes[2].plot([], [], color="grey", linestyle="-", label="Concept")
-
-fig.subplots_adjust(bottom=0.3)
-fig.text(0.1, 0.12, r"$\sum_{IWP}$ HCRE $\cdot$ P :", color="black", fontsize=12)
-fig.text(0.3, 0.12, "ARTS", color='k') 
-fig.text(0.3, 0.1, f"SW: {weighted_sw.sum():.2f} W/m$^2$", color="blue")
-fig.text(0.3, 0.08, f"LW: {weighted_lw.sum():.2f} W/m$^2$", color="red")
-fig.text(0.3, 0.06, f"Net: {weighted_net.sum():.2f} W/m$^2$", color="black")
-fig.text(0.55, 0.12, "Concept", color='k')
-fig.text(0.55, 0.1, f"SW: {weighted_sw_cm.sum():.2f} W/m$^2$", color="blue")
-fig.text(0.55, 0.08, f"LW: {weighted_lw_cm.sum():.2f} W/m$^2$", color="red")
-fig.text(0.55, 0.06, f"Net: {weighted_net_cm.sum():.2f} W/m$^2$", color="black")
-
 for ax in axes:
     control_plot(ax)
 
@@ -230,11 +198,10 @@ handles, labels = axes[0].get_legend_handles_labels()
 fig.legend(
     labels=labels,
     handles=handles,
-    bbox_to_anchor=(0.78, 0.24),
+    bbox_to_anchor=(0.9, -0.02),
     ncols=5
 )
 
-fig.savefig("plots/paper/cre_weighting_talk.png", dpi=500, bbox_inches="tight")
-
+fig.savefig("plots/paper/cre_weighting_talk_without.png", dpi=500, bbox_inches="tight")
 
 # %%

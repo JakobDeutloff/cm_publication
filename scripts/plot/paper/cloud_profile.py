@@ -93,7 +93,7 @@ axes[1].set_xlabel("Ice Water Path / kg m$^{-2}$")
 
 # add colorbar
 fig.subplots_adjust(right=0.8)
-cax = fig.add_axes([0.85, 0.42, 0.02, 0.48])
+cax = fig.add_axes([0.85, 0.41, 0.02, 0.48])
 fig.colorbar(cf, cax=cax, label="Cloud Cover")
 
 # add legend for axes[1]
@@ -101,7 +101,7 @@ handles, labels = axes[1].get_legend_handles_labels()
 fig.legend(
     labels=labels,
     handles=handles,
-    bbox_to_anchor=(0.92, 0.29),
+    bbox_to_anchor=(0.92, 0.3),
     frameon=False,
 )
 
