@@ -21,7 +21,7 @@ def load_atms_and_fluxes():
     path = "/work/bm1183/m301049/icon_arts_processed/"
     run = "fullrange_flux_mid1deg_noice/"
     fluxes_3d_noice = xr.open_dataset(path + run + "fluxes_3d_full.nc")
-    atms = xr.open_dataset("/work/bm1183/m301049/nextgems_profiles/monsoon/atms_full.nc")
+    atms = xr.open_dataset("/work/bm1183/m301049/icon_arts_processed/fullrange_flux_mid1deg/atms_full.nc")
     run = "fullrange_flux_mid1deg/"
     fluxes_3d = xr.open_dataset(path + run + "fluxes_3d_full.nc")
 
@@ -88,7 +88,7 @@ def load_binned_derived_variables():
         lw_vars = pickle.load(f)
     with open(path + "mean_sw_vars.pkl", "rb") as f:
         sw_vars = pickle.load(f)
-    with open(path + "mean_lc_vars.pkl", "rb") as f:
+    with open(path + "binned_lc_vars.pkl", "rb") as f:
         lc_vars = pickle.load(f)
     return lw_vars, sw_vars, lc_vars
 
@@ -138,10 +138,10 @@ def load_average_lc_parameters():
         Average parameters for a_t and R_t."""
 
     path = "/work/bm1183/m301049/icon_arts_processed/derived_quantities/"
-    with open(path + "average_a_t_r_t.pkl", "rb") as f:
-        average_lc_params = pickle.load(f)
+    with open(path + "mean_lc_vars.pkl", "rb") as f:
+        mean_lc_params = pickle.load(f)
 
-    return average_lc_params
+    return mean_lc_params
 
 def load_binned_atms():
     """

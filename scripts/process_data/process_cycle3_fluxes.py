@@ -74,7 +74,7 @@ for run in runs:
     flux_unstacked.to_netcdf(f"{path}fluxes{run}.nc")
 
 # %% testplot of cre in allsky fluxes
-flux = fluxes['_noliquid'].isel(pressure=-1)
+flux = fluxes['_nofrozen'].isel(pressure=-1)
 cre_sw = (flux["allsky_sw_down"] - flux["allsky_sw_up"]) - (
     flux["clearsky_sw_down"] - flux["clearsky_sw_up"]
 )

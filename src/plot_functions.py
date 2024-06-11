@@ -300,7 +300,7 @@ def plot_model_output_arts(
     # hc temperature
     axes[0, 0].scatter(
         cut_data(atms["IWP"], mask),
-        cut_data(lw_vars["h_cloud_temperature"], mask),
+        cut_data(atms["hc_top_temperature"], mask),
         s=0.1,
         color="k",
     )
@@ -705,19 +705,19 @@ def plot_model_output_arts_with_cre(
     cre_average,
 ):
     fig = plt.figure(figsize=(12, 18))
-    mask_tuning = lw_vars["mask_height"] & lw_vars["mask_hc_no_lc"]
+    mask_tuning = atms["mask_height"] & atms["mask_hc_no_lc"]
     IWP_points = (IWP_bins[1:] + IWP_bins[:-1]) / 2
 
     # hc temperature
     ax1 = fig.add_subplot(6, 2, 1)
     ax1.scatter(
-        cut_data(atms["IWP"], lw_vars["mask_height"]),
-        cut_data(lw_vars["h_cloud_temperature"], lw_vars["mask_height"]),
+        cut_data(atms["IWP"], atms["mask_height"]),
+        cut_data(atms["hc_top_temperature"], atms["mask_height"]),
         s=0.1,
         color="grey",
     )
     ax1.plot(result["T_hc"], color="red", linestyle="--", label="Mean")
-    ax1.set_ylabel(r"$\mathrm{T_{h}}$ / K")
+    ax1.set_ylabel(r"HC Temperature ($\mathrm{T_{h}}$) / K")
     ax1.legend()
 
     # emissivity
@@ -730,38 +730,38 @@ def plot_model_output_arts_with_cre(
     )
     ax2.plot(lw_binned_vars["binned_emissivity"], color="orange", label="Mean")
     ax2.plot(result["em_hc"], color="red", label="Fitted Logistic", linestyle="--")
-    ax2.set_ylabel(r"$\epsilon$")
+    ax2.set_ylabel(r"HC Emissivity ($\epsilon$)")
     ax2.legend()
 
     # lc fraction
-    ax4 = fig.add_subplot(6, 2, 3)
-    ax4.plot(IWP_points, f_lc_vals["raw"], label="Raw", color="grey")
-    ax4.plot(
+    ax3 = fig.add_subplot(6, 2, 3)
+    ax3.plot(IWP_points, f_lc_vals["raw"], label="All", color="grey")
+    ax3.plot(
         IWP_points, f_lc_vals["unconnected"], label="Unconnected", color="purple", linestyle="--"
     )
-    ax4.plot(
+    ax3.plot(
         result["lc_fraction"],
         color="red",
         linestyle="--",
         label="Constant",
     )
-    ax4.legend()
-    ax4.set_ylabel(r"$f$")
+    ax3.legend()
+    ax3.set_ylabel(r"Low Cloud Fraction ($f$)")
 
     # alpha
-    ax3 = fig.add_subplot(6, 2, 4)
+    ax4 = fig.add_subplot(6, 2, 4)
 
-    sc_alpha = ax3.scatter(
+    sc_alpha = ax4.scatter(
         cut_data(atms["IWP"], mask_tuning),
         cut_data(sw_vars["high_cloud_albedo"], mask_tuning),
         s=0.1,
         c=cut_data(fluxes_3d_noice["allsky_sw_down"].isel(pressure=-1), mask_tuning),
         cmap="viridis",
     )
-    ax3.plot(sw_binned_vars["interpolated_albedo"], color="orange", label="Mean")
-    ax3.plot(result["alpha_hc"], color="red", linestyle="--", label="Fitted Logistic")
-    ax3.set_ylabel(r"$\alpha$")
-    ax3.legend()
+    ax4.plot(sw_binned_vars["interpolated_albedo"], color="orange", label="Mean")
+    ax4.plot(result["alpha_hc"], color="red", linestyle="--", label="Fitted Logistic")
+    ax4.set_ylabel(r"HC Albedo ($\alpha$)")
+    ax4.legend()
 
 
     # R_t
@@ -769,15 +769,15 @@ def plot_model_output_arts_with_cre(
     colors = ["black", "grey", "blue"]
     cmap = LinearSegmentedColormap.from_list("my_cmap", colors)
     sc_rt = ax5.scatter(
-        cut_data(atms["IWP"], lw_vars["mask_height"]),
+        cut_data(atms["IWP"], atms["mask_height"]),
         cut_data_mixed(
             fluxes_3d_noice["clearsky_lw_up"].isel(pressure=-1),
             fluxes_3d_noice["allsky_lw_up"].isel(pressure=-1),
-            lw_vars["mask_height"],
+            atms["mask_height"],
             atms["connected"],
         ),
         c=cut_data_mixed(
-            (atms["LWP"] * 0) + 1e-12, atms["LWP"], lw_vars["mask_height"], atms["connected"]
+            (atms["LWP"] * 0) + 1e-12, atms["LWP"], atms["mask_height"], atms["connected"]
         ),
         cmap=cmap,
         norm=LogNorm(vmin=1e-6, vmax=1e0),
@@ -787,10 +787,10 @@ def plot_model_output_arts_with_cre(
         cut_data_mixed(
             fluxes_3d_noice["clearsky_lw_up"].isel(pressure=-1),
             fluxes_3d_noice["allsky_lw_up"].isel(pressure=-1),
-            lw_vars["mask_height"],
+            atms["mask_height"],
             atms["connected"],
         )
-        .groupby_bins(cut_data(atms["IWP"], lw_vars["mask_height"]), bins=IWP_bins)
+        .groupby_bins(cut_data(atms["IWP"], atms["mask_height"]), bins=IWP_bins)
         .mean()
     )
     ax5.plot(IWP_points, mean_rt, color="orange", label="Mean")
@@ -799,22 +799,22 @@ def plot_model_output_arts_with_cre(
     ax5.plot(
         result["R_t"], color="red", linestyle="--", label=r"Superposition + $C_{\mathrm{H_2O}}$"
     )
-    ax5.set_ylabel(r"$\mathrm{R_t}$ / $\mathrm{W ~ m^{-2}}$")
+    ax5.set_ylabel(r"LT LW Emissions ($\mathrm{R_t}$) / $\mathrm{W ~ m^{-2}}$")
     ax5.legend()
     ax5.set_ylim(-350, -200)
 
     # a_t
     ax6 = fig.add_subplot(6, 2, 6)
     sc_at = ax6.scatter(
-        cut_data(atms["IWP"], lw_vars["mask_height"]),
+        cut_data(atms["IWP"], atms["mask_height"]),
         cut_data_mixed(
             fluxes_3d_noice["albedo_clearsky"],
             fluxes_3d_noice["albedo_allsky"],
-            lw_vars["mask_height"],
+            atms["mask_height"],
             atms["connected"],
         ),
         c=cut_data_mixed(
-            (atms["LWP"] * 0) + 1e-12, atms["LWP"], lw_vars["mask_height"], atms["connected"]
+            (atms["LWP"] * 0) + 1e-12, atms["LWP"], atms["mask_height"], atms["connected"]
         ),
         cmap=cmap,
         norm=LogNorm(vmin=1e-6, vmax=1e0),
@@ -824,17 +824,17 @@ def plot_model_output_arts_with_cre(
         cut_data_mixed(
             fluxes_3d_noice["albedo_clearsky"],
             fluxes_3d_noice["albedo_allsky"],
-            lw_vars["mask_height"],
+            atms["mask_height"],
             atms["connected"],
         )
-        .groupby_bins(cut_data(atms["IWP"], lw_vars["mask_height"]), bins=IWP_bins)
+        .groupby_bins(cut_data(atms["IWP"], atms["mask_height"]), bins=IWP_bins)
         .mean()
     )
     ax6.plot(IWP_points, mean_a_t, color="orange", label="Mean")
     ax6.axhline(cs_consts["a_t"], color="grey", linestyle="--", label="Clearsky")
     ax6.axhline(lc_consts["a_t"], color="navy", linestyle="--", label="Low Cloud")
     ax6.plot(result["alpha_t"], color="red", linestyle="--", label="Superposition")
-    ax6.set_ylabel(r"$\alpha_t$")
+    ax6.set_ylabel(r"LT Albedo ($\alpha_t$)")
     ax6.legend()
 
     # CRE
@@ -855,6 +855,7 @@ def plot_model_output_arts_with_cre(
     ax7.legend(handles, labels)
 
     axes = [ax1, ax2, ax3, ax4, ax5, ax6, ax7]
+    labels = ["a", "b", "c", "d", "e", "f", "g"]
     for ax in axes:
         ax.set_xscale("log")
         ax.spines["top"].set_visible(False)
@@ -864,6 +865,8 @@ def plot_model_output_arts_with_cre(
         ax.set_xticks([1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1e0, 1e1])
         ax.set_xticklabels("")
         ax.set_xlim(1e-5, 10)
+        # plot label at top right corner of axis 
+        ax.text(0.05, 1.08, labels.pop(0), transform=ax.transAxes, fontsize=14, fontweight='bold', va='top', ha='right')
 
     ax5.set_xticklabels(["1e-5", "1e-4", "1e-3", "1e-2", "1e-1", "1e0", "1e1"])
     ax6.set_xticklabels(["1e-5", "1e-4", "1e-3", "1e-2", "1e-1", "1e0", "1e1"])
@@ -899,14 +902,14 @@ def plot_model_output_arts_fancy(
     cs_consts,
 ):
     fig = plt.figure(figsize=(15, 9))
-    mask_tuning = lw_vars["mask_height"] & lw_vars["mask_hc_no_lc"]
+    mask_tuning = atms["mask_height"] & atms["mask_hc_no_lc"]
     IWP_points = (IWP_bins[1:] + IWP_bins[:-1]) / 2
 
     # hc temperature
     ax1 = fig.add_subplot(3, 3, 1)
     ax1.scatter(
-        cut_data(atms["IWP"], lw_vars["mask_height"]),
-        cut_data(lw_vars["h_cloud_temperature"], lw_vars["mask_height"]),
+        cut_data(atms["IWP"], atms["mask_height"]),
+        cut_data(atms["hc_top_temperature"], atms["mask_height"]),
         s=0.1,
         color="grey",
     )
@@ -962,15 +965,15 @@ def plot_model_output_arts_fancy(
     colors = ["black", "grey", "blue"]
     cmap = LinearSegmentedColormap.from_list("my_cmap", colors)
     sc_rt = ax5.scatter(
-        cut_data(atms["IWP"], lw_vars["mask_height"]),
+        cut_data(atms["IWP"], atms["mask_height"]),
         cut_data_mixed(
             fluxes_3d_noice["clearsky_lw_up"].isel(pressure=-1),
             fluxes_3d_noice["allsky_lw_up"].isel(pressure=-1),
-            lw_vars["mask_height"],
+            atms["mask_height"],
             atms["connected"],
         ),
         c=cut_data_mixed(
-            (atms["LWP"] * 0) + 1e-12, atms["LWP"], lw_vars["mask_height"], atms["connected"]
+            (atms["LWP"] * 0) + 1e-12, atms["LWP"], atms["mask_height"], atms["connected"]
         ),
         cmap=cmap,
         norm=LogNorm(vmin=1e-6, vmax=1e0),
@@ -980,10 +983,10 @@ def plot_model_output_arts_fancy(
         cut_data_mixed(
             fluxes_3d_noice["clearsky_lw_up"].isel(pressure=-1),
             fluxes_3d_noice["allsky_lw_up"].isel(pressure=-1),
-            lw_vars["mask_height"],
+            atms["mask_height"],
             atms["connected"],
         )
-        .groupby_bins(cut_data(atms["IWP"], lw_vars["mask_height"]), bins=IWP_bins)
+        .groupby_bins(cut_data(atms["IWP"], atms["mask_height"]), bins=IWP_bins)
         .mean()
     )
     ax5.plot(IWP_points, mean_rt, color="orange", label="Mean")
@@ -999,15 +1002,15 @@ def plot_model_output_arts_fancy(
     # a_t
     ax6 = fig.add_subplot(3, 3, 6)
     sc_at = ax6.scatter(
-        cut_data(atms["IWP"], lw_vars["mask_height"]),
+        cut_data(atms["IWP"], atms["mask_height"]),
         cut_data_mixed(
             fluxes_3d_noice["albedo_clearsky"],
             fluxes_3d_noice["albedo_allsky"],
-            lw_vars["mask_height"],
+            atms["mask_height"],
             atms["connected"],
         ),
         c=cut_data_mixed(
-            (atms["LWP"] * 0) + 1e-12, atms["LWP"], lw_vars["mask_height"], atms["connected"]
+            (atms["LWP"] * 0) + 1e-12, atms["LWP"], atms["mask_height"], atms["connected"]
         ),
         cmap=cmap,
         norm=LogNorm(vmin=1e-6, vmax=1e0),
@@ -1017,10 +1020,10 @@ def plot_model_output_arts_fancy(
         cut_data_mixed(
             fluxes_3d_noice["albedo_clearsky"],
             fluxes_3d_noice["albedo_allsky"],
-            lw_vars["mask_height"],
+            atms["mask_height"],
             atms["connected"],
         )
-        .groupby_bins(cut_data(atms["IWP"], lw_vars["mask_height"]), bins=IWP_bins)
+        .groupby_bins(cut_data(atms["IWP"], atms["mask_height"]), bins=IWP_bins)
         .mean()
     )
     ax6.plot(IWP_points, mean_a_t, color="orange", label="Mean")
@@ -1071,14 +1074,14 @@ def plot_model_output_arts_reduced(
     cs_consts,
 ):
     fig = plt.figure(figsize=(12, 5))
-    mask_tuning = lw_vars["mask_height"] & lw_vars["mask_hc_no_lc"]
+    mask_tuning = atms["mask_height"] & atms["mask_hc_no_lc"]
     IWP_points = (IWP_bins[1:] + IWP_bins[:-1]) / 2
 
     # hc temperature
     ax1 = fig.add_subplot(2, 3, 1)
     ax1.scatter(
-        cut_data(atms["IWP"], lw_vars["mask_height"]),
-        cut_data(lw_vars["h_cloud_temperature"], lw_vars["mask_height"]),
+        cut_data(atms["IWP"], atms["mask_height"]),
+        cut_data(atms["hc_top_temperature"], atms["mask_height"]),
         s=0.1,
         color="grey",
     )
@@ -1127,15 +1130,15 @@ def plot_model_output_arts_reduced(
     colors = ["black", "grey", "blue"]
     cmap = LinearSegmentedColormap.from_list("my_cmap", colors)
     sc_at = ax6.scatter(
-        cut_data(atms["IWP"], lw_vars["mask_height"]),
+        cut_data(atms["IWP"], atms["mask_height"]),
         cut_data_mixed(
             fluxes_3d_noice["albedo_clearsky"],
             fluxes_3d_noice["albedo_allsky"],
-            lw_vars["mask_height"],
+            atms["mask_height"],
             atms["connected"],
         ),
         c=cut_data_mixed(
-            (atms["LWP"] * 0) + 1e-12, atms["LWP"], lw_vars["mask_height"], atms["connected"]
+            (atms["LWP"] * 0) + 1e-12, atms["LWP"], atms["mask_height"], atms["connected"]
         ),
         cmap=cmap,
         norm=LogNorm(vmin=1e-6, vmax=1e0),
@@ -1150,15 +1153,15 @@ def plot_model_output_arts_reduced(
     # R_t
     ax5 = fig.add_subplot(2, 3, 6)
     sc_rt = ax5.scatter(
-        cut_data(atms["IWP"], lw_vars["mask_height"]),
+        cut_data(atms["IWP"], atms["mask_height"]),
         cut_data_mixed(
             fluxes_3d_noice["clearsky_lw_up"].isel(pressure=-1),
             fluxes_3d_noice["allsky_lw_up"].isel(pressure=-1),
-            lw_vars["mask_height"],
+            atms["mask_height"],
             atms["connected"],
         ),
         c=cut_data_mixed(
-            (atms["LWP"] * 0) + 1e-12, atms["LWP"], lw_vars["mask_height"], atms["connected"]
+            (atms["LWP"] * 0) + 1e-12, atms["LWP"], atms["mask_height"], atms["connected"]
         ),
         cmap=cmap,
         norm=LogNorm(vmin=1e-6, vmax=1e0),

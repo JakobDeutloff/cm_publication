@@ -17,49 +17,11 @@ atms, fluxes_3d, fluxes_3d_noice = load_atms_and_fluxes()
 lw_vars = xr.Dataset()
 mean_lw_vars = pd.DataFrame()
 
-# %% calculate high cloud temperature from vertically integrated IWP
-IWP_emission = 8e-3  # IWP where high clouds become opaque
-
-p_top_idx_thin = (atms["IWC"] + atms['snow'] + atms['graupel']).argmax("pressure")
-p_top_idx_thick = np.abs(atms["IWC_cumsum"] - IWP_emission).argmin("pressure")
-p_top_idx = xr.where(p_top_idx_thick > p_top_idx_thin, p_top_idx_thick, p_top_idx_thin)
-p_top = atms.isel(pressure=p_top_idx).pressure
-T_h_lw = atms["temperature"].sel(pressure=p_top)
-lw_vars["h_cloud_temperature"] = T_h_lw
-lw_vars["h_cloud_top_pressure"] = p_top
-
-# %% find profiles with high cloud tops above 350 hPa
-mask_hc_no_lc = (atms["IWP"] > 1e-7) & (atms["LWP"] < 1e-7)
-mask_height = p_top < 35000
-lw_vars["mask_height"] = mask_height
-lw_vars["mask_hc_no_lc"] = mask_hc_no_lc
-
-# %% plot p_top
-fig, ax = plt.subplots(figsize=(7, 5))
-sc = ax.scatter(
-    atms["IWP"].sel(lat=slice(-30, 30)),
-    p_top.sel(lat=slice(-30, 30)) / 100,
-    s=0.1,
-    c=atms["LWP"].sel(lat=slice(-30, 30)),
-    norm=mpl.colors.LogNorm(vmin=1e-6),
-    cmap="viridis",
-)
-ax.set_xscale("log")
-ax.axhline(350, color="r")
-ax.invert_yaxis()
-cb = fig.colorbar(sc, extend="min")
-cb.set_label("LWP / kg m$^{-2}$")
-ax.set_xlabel("IWP / kg m$^{-2}$")
-ax.set_ylabel("p$_{top}$ / hPa")
-ax.spines["right"].set_visible(False)
-ax.spines["top"].set_visible(False)
-fig.savefig("plots/p_top.png", dpi=300, bbox_inches="tight")
-
 # %% calculate high cloud emissivity
 sigma = 5.67e-8  # W m-2 K-4
 LW_out_as = fluxes_3d.isel(pressure=-1)["allsky_lw_up"]
 LW_out_cs = fluxes_3d_noice.isel(pressure=-1)["allsky_lw_up"]
-rad_hc = -lw_vars["h_cloud_temperature"] ** 4 * sigma
+rad_hc = -atms["hc_top_temperature"] ** 4 * sigma
 hc_emissivity = (LW_out_as - LW_out_cs) / (rad_hc - LW_out_cs)
 lw_vars["high_cloud_emissivity"] = hc_emissivity
 
@@ -72,8 +34,12 @@ def cut_data(data, mask):
 IWP_bins = np.logspace(-5, 1, num=50)
 IWP_points = (IWP_bins[1:] + IWP_bins[:-1]) / 2
 mean_hc_emissivity = (
-    cut_data(lw_vars["high_cloud_emissivity"], mask_height & mask_hc_no_lc)
-    .groupby_bins(cut_data(atms["IWP"], mask_height & mask_hc_no_lc), IWP_bins, labels=IWP_points)
+    cut_data(lw_vars["high_cloud_emissivity"], atms["mask_height"] & atms["mask_hc_no_lc"])
+    .groupby_bins(
+        cut_data(atms["IWP"], atms["mask_height"] & atms["mask_hc_no_lc"]),
+        IWP_bins,
+        labels=IWP_points,
+    )
     .mean()
 )
 
@@ -89,21 +55,21 @@ def logistic(x, L, x0, k):
 
 x = np.log10(IWP_points)
 y = mean_lw_vars["binned_emissivity"].copy()
-y[y>1] = 1
 nan_mask = ~np.isnan(y)
 x = x[nan_mask]
 y = y[nan_mask]
 
 popt, pcov = curve_fit(logistic, x, y)
+popt[0] = 1
 logistic_curve = logistic(np.log10(IWP_points), *popt)
 
 # %% plot mean hv emissivity in scatterplot with IWP
 fig, ax = scatterplot(
-    cut_data(atms["IWP"], mask_height & mask_hc_no_lc),
-    cut_data(lw_vars["high_cloud_emissivity"], mask_height & mask_hc_no_lc),
+    cut_data(atms["IWP"], atms["mask_height"] & atms["mask_hc_no_lc"]),
+    cut_data(lw_vars["high_cloud_emissivity"], atms["mask_height"] & atms["mask_hc_no_lc"]),
     cut_data(
         fluxes_3d_noice.isel(pressure=-1)["clearsky_sw_down"],
-        mask_height & mask_hc_no_lc,
+        atms["mask_height"] & atms["mask_hc_no_lc"],
     ),
     xlabel="IWP / kg m$^{-2}$",
     ylabel="High Cloud Emissivity",
@@ -117,6 +83,27 @@ ax.plot(IWP_points, logistic_curve, color="r", label="Fitted logistic", linestyl
 ax.axhline(1, color="grey", linestyle="--")
 ax.legend()
 fig.savefig("plots/emissivity.png", dpi=300, bbox_inches="tight")
+
+# %% plot p_top
+fig, ax = plt.subplots(figsize=(7, 5))
+sc = ax.scatter(
+    atms["IWP"].sel(lat=slice(-30, 30)),
+    atms['hc_top_pressure'].sel(lat=slice(-30, 30)) / 100,
+    s=0.1,
+    c=atms["LWP"].sel(lat=slice(-30, 30)),
+    norm=mpl.colors.LogNorm(vmin=1e-6),
+    cmap="viridis",
+)
+ax.set_xscale("log")
+ax.axhline(350, color="r")
+ax.invert_yaxis()
+cb = fig.colorbar(sc, extend="min")
+cb.set_label("LWP / kg m$^{-2}$")
+ax.set_xlabel("IWP / kg m$^{-2}$")
+ax.set_ylabel("p$_{top}$ / hPa")
+ax.spines["right"].set_visible(False)
+ax.spines["top"].set_visible(False)
+fig.savefig("plots/p_top.png", dpi=300, bbox_inches="tight")
 
 # %% save coefficients as pkl file
 path = "/work/bm1183/m301049/icon_arts_processed/derived_quantities/"

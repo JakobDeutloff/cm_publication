@@ -26,12 +26,12 @@ albedo_cs = cut_data(fluxes_3d["albedo_clearsky"]).mean().values
 R_t_cs = cut_data(fluxes_3d['clearsky_lw_up']).isel(pressure=-1).mean().values
 SW_in = cut_data(fluxes_3d["clearsky_sw_down"]).isel(pressure=-1).mean().values
 
-# %% Set additional parameters
-parameters['lc_fraction'] = 0.175
-
 # %% set mask ans bins 
-mask = lw_vars["mask_height"]
+mask = atms["mask_height"]
 IWP_bins = np.logspace(-5, 1, num=50)
+
+# %% set additional parameters 
+parameters['lc_fraction'] = float(const_lc_quantities['f'])
 
 # %% run model for all profiles with cloud tops above 350 hPa 
 result = run_model(
@@ -39,7 +39,7 @@ result = run_model(
     albedo_cs = albedo_cs, 
     R_t_cs = R_t_cs,
     SW_in = SW_in,
-    T_hc = cut_data(lw_vars["h_cloud_temperature"], mask),
+    T_hc = cut_data(atms["hc_top_temperature"], mask),
     LWP = cut_data(atms['LWP'], mask),
     IWP = cut_data(atms['IWP'], mask),
     connectedness=atms['connected'],
@@ -49,6 +49,6 @@ result = run_model(
 )
 # %% save result 
 path = '/work/bm1183/m301049/cm_results/'
-with open(path + 'icon_mons_const_lc_mixed.pkl', 'wb') as f:
+with open(path + 'icon_mons_const_lc.pkl', 'wb') as f:
     pickle.dump(result, f)
 # %%

@@ -22,7 +22,7 @@ aux = xr.open_dataset(
 
 # %% initialize dataset
 lc_vars = xr.Dataset()
-mean_lc_vars = pd.DataFrame()
+binned_lc_vars = pd.DataFrame()
 
 # %% mask of night values
 mask_night = fluxes_3d["allsky_sw_down"].isel(pressure=-1) == 0
@@ -46,40 +46,38 @@ lc_vars["albedo_clearsky"] = albedo_clearsky
 # %% average and interpolate albedo
 LWP_bins = np.logspace(-14, 2, num=150)
 LWP_points = (LWP_bins[1:] + LWP_bins[:-1]) / 2
-SW_down_bins = np.linspace(0, 1360, 30)
-binned_allsky_albedo = np.zeros([len(LWP_bins) - 1, len(SW_down_bins) - 1]) * np.nan
+lon_bins = np.linspace(-180, 180, num=36)
+lon_points = (lon_bins[1:] + lon_bins[:-1]) / 2
+binned_lt_albedo = np.zeros([len(LWP_bins) - 1, len(lon_bins) - 1]) * np.nan
 
 # allsky albedo depends on SW and LWP
 for i in range(len(LWP_bins) - 1):
     LWP_mask = (atms["LWP"] > LWP_bins[i]) & (atms["LWP"] <= LWP_bins[i + 1])
-    for j in range(len(SW_down_bins) - 1):
-        SW_mask = (fluxes_3d["allsky_sw_down"].isel(pressure=-1) > SW_down_bins[j]) & (
-            fluxes_3d["allsky_sw_down"].isel(pressure=-1) <= SW_down_bins[j + 1]
-        )
-        binned_allsky_albedo[i, j] = float(
-            (lc_vars["albedo_allsky"].where(LWP_mask & SW_mask).sel(lat=slice(-30, 30)))
+    for j in range(len(lon_bins) - 1):
+        binned_lt_albedo[i, j] = float(
+            (lc_vars["albedo_allsky"].where(LWP_mask).sel(lat=slice(-30, 30), lon=slice(lon_bins[j], lon_bins[j + 1])))
             .mean()
             .values
         )
 
 # %% interpolate albedo bins
-non_nan_indices = np.array(np.where(~np.isnan(binned_allsky_albedo)))
-non_nan_values = binned_allsky_albedo[~np.isnan(binned_allsky_albedo)]
-nan_indices = np.array(np.where(np.isnan(binned_allsky_albedo)))
+non_nan_indices = np.array(np.where(~np.isnan(binned_lt_albedo)))
+non_nan_values = binned_lt_albedo[~np.isnan(binned_lt_albedo)]
+nan_indices = np.array(np.where(np.isnan(binned_lt_albedo)))
 interpolated_values = griddata(
     non_nan_indices.T, non_nan_values, nan_indices.T, method="linear"
 )
-binned_allsky_albedo_interp = binned_allsky_albedo.copy()
-binned_allsky_albedo_interp[np.isnan(binned_allsky_albedo)] = interpolated_values
+binned_lt_albedo_interp = binned_lt_albedo.copy()
+binned_lt_albedo_interp[np.isnan(binned_lt_albedo)] = interpolated_values
 
 # %% plot albedo in SW bins
 fig, axes = plt.subplots(1, 2, figsize=(10, 6))
 
 pcol = axes[0].pcolormesh(
-    LWP_bins, SW_down_bins, binned_allsky_albedo.T, cmap="viridis"
+    LWP_bins, lon_bins, binned_lt_albedo.T, cmap="viridis"
 )
 axes[1].pcolormesh(
-    LWP_bins, SW_down_bins, binned_allsky_albedo_interp.T, cmap="viridis"
+    LWP_bins, lon_bins, binned_lt_albedo_interp.T, cmap="viridis"
 )
 
 axes[0].set_ylabel("SWin at TOA / W m$^{-2}$")
@@ -91,31 +89,27 @@ for ax in axes:
 fig.colorbar(pcol, label="Allsky Albedo", location="bottom", ax=axes[:], shrink=0.8)
 
 # %% average over SW albedo bins
-def time_correction(F1, F2):
-    return np.abs(np.arccos(F1) - np.arccos(F2))
+SW_weights = np.zeros(len(lon_points))
+for i in range(len(lon_bins)-1):
+    SW_weights[i] = float(
+        fluxes_3d.isel(pressure=-1)["allsky_sw_down"]
+        .sel(lat=slice(-30, 30), lon=slice(lon_bins[i], lon_bins[i + 1]))
+        .mean()
+        .values
+    )
 
-time_corr = np.zeros(len(SW_down_bins) - 1)
-SW_bins_normalized = SW_down_bins / SW_down_bins.max()
-for i in range(len(SW_down_bins) - 1):
-    time_corr[i] = time_correction(SW_bins_normalized[i], SW_bins_normalized[i+1])
-
-mean_allsky_albedo = np.zeros(len(LWP_points))
-mean_allsky_albedo_interp = np.zeros(len(LWP_points))
-SW_down = (SW_down_bins[1:] + SW_down_bins[:-1]) / 2  # center of SW bins
+mean_lt_albedo = np.zeros(len(LWP_points))
+mean_lt_albedo_interp = np.zeros(len(LWP_points))
 for i in range(len(LWP_bins) - 1):
-    nan_mask = ~np.isnan(binned_allsky_albedo[i, :])
-    mean_allsky_albedo[i] = np.sum(
-        binned_allsky_albedo[i, :][nan_mask] * SW_down[nan_mask] * time_corr[nan_mask]
-    ) / np.sum(SW_down[nan_mask] * time_corr[nan_mask])
-    nan_mask_interp = ~np.isnan(binned_allsky_albedo_interp[i, :])
-    mean_allsky_albedo_interp[i] = np.sum(
-        binned_allsky_albedo_interp[i, :][nan_mask_interp] * SW_down[nan_mask_interp] * time_corr[nan_mask_interp]
-    ) / np.sum(SW_down[nan_mask_interp] * time_corr[nan_mask_interp])
+    nan_mask = ~np.isnan(binned_lt_albedo[i, :])
+    mean_lt_albedo[i] = np.sum(binned_lt_albedo[i, :][nan_mask]*SW_weights[nan_mask])/np.sum(SW_weights[nan_mask])
+    nan_mask_interp = ~np.isnan(binned_lt_albedo_interp[i, :])
+    mean_lt_albedo_interp[i] = np.sum(binned_lt_albedo_interp[i, :][nan_mask]*SW_weights[nan_mask])/np.sum(SW_weights[nan_mask])
 
-mean_lc_vars.index = LWP_points
-mean_lc_vars.index.name = "LWP"
-mean_lc_vars["binned_albedo"] = mean_allsky_albedo
-mean_lc_vars["interpolated_albedo"] = mean_allsky_albedo_interp
+binned_lc_vars.index = LWP_points
+binned_lc_vars.index.name = "LWP"
+binned_lc_vars["binned_albedo"] = mean_lt_albedo
+binned_lc_vars["interpolated_albedo"] = mean_lt_albedo_interp
 mean_clearsky_albedo = lc_vars["albedo_clearsky"].sel(lat=slice(-30, 30)).mean().values
 
 # calculate average albedo for LWP > 1e-6
@@ -130,8 +124,8 @@ for i in range(len(LWP_bins) - 1):
     )
 
 mean_cloud_albedo = np.sum(
-    mean_lc_vars["interpolated_albedo"][mask_lwp_bins] * number_of_points[mask_lwp_bins]
-) / np.sum(number_of_points[mask_lwp_bins][mean_lc_vars["interpolated_albedo"][mask_lwp_bins] > 0])
+    binned_lc_vars["interpolated_albedo"][mask_lwp_bins] * number_of_points[mask_lwp_bins]
+) / np.sum(number_of_points[mask_lwp_bins][binned_lc_vars["interpolated_albedo"][mask_lwp_bins] > 0])
 
 
 # %% fit logistic function to weighted and interpolated albedo
@@ -140,7 +134,7 @@ def logistic(x, L, x0, k, j):
 
 
 x = np.log10(LWP_points)
-y = mean_lc_vars["interpolated_albedo"]
+y = binned_lc_vars["interpolated_albedo"]
 y[x < -4] = mean_clearsky_albedo  # define albedo as clearsky albedo below LWP of 10^-4
 nan_mask = ~np.isnan(y)
 x = x[nan_mask]
@@ -163,7 +157,7 @@ fig, ax = scatterplot(
 
 ax.axhline(mean_clearsky_albedo, color="k", linestyle="--", label="Mean clearsky")
 ax.axhline(mean_cloud_albedo, color="grey", linestyle="--", label='Mean low cloud')
-ax.plot(mean_lc_vars["interpolated_albedo"], color="k", linestyle="-", label="Mean")
+ax.plot(binned_lc_vars["interpolated_albedo"], color="k", linestyle="-", label="Mean")
 ax.plot(LWP_points, logistic_curve, color="r", linestyle="--", label="Fit")
 ax.legend()
 fig.tight_layout()
@@ -208,7 +202,7 @@ result = linregress(x_data, y_data)
 
 # %% average R_t over LWP bins
 R_t_binned = cut_data(R_t).groupby_bins(cut_data(atms["LWP"]), LWP_bins).mean()
-mean_lc_vars["binned_R_t"] = R_t_binned
+binned_lc_vars["binned_R_t"] = R_t_binned
 lc_R_t = cut_data(R_t).where(mask_lwp & ~mask_connected).mean().values
 
 # %% plot R_t vs LWP
@@ -216,7 +210,7 @@ fig, ax = plt.subplots()
 
 ax.scatter(cut_data(atms["LWP"]),cut_data(lc_vars["R_t"]), marker=".", s=1, color="blue")
 
-mean_lc_vars["binned_R_t"].plot(ax=ax, color="k", linestyle="-", label='Mean')
+binned_lc_vars["binned_R_t"].plot(ax=ax, color="k", linestyle="-", label='Mean')
 ax.axhline(clearsky_R_t, color="k", linestyle="--", label='Mean clearsky')
 ax.axhline(lc_R_t, color="grey", linestyle="--", label='Mean low cloud')
 lwp_points = np.logspace(-14, 2, 100)
@@ -240,7 +234,20 @@ ax.set_xlabel("LWP / kg m$^{-2}$")
 ax.set_ylabel("R$_t$ / W m$^{-2}$")
 ax.legend()
 fig.tight_layout()
-fig.savefig("plots/R_t_vs_LWP.png", dpi=300)
+# fig.savefig("plots/R_t_vs_LWP.png", dpi=300)
+
+# %% calculate mean lc fraction
+from src.hc_model import calc_lc_fraction
+iwp_bins = np.logspace(-5, 1, num=50)
+
+f_unconnected = calc_lc_fraction(
+    cut_data(atms["LWP"], atms["mask_height"]),
+    connected=cut_data(atms["connected"], atms["mask_height"]),
+)
+f_unconnected_binned = f_unconnected.groupby_bins(
+    cut_data(atms["IWP"], atms["mask_height"]), iwp_bins
+).mean()
+f_mean = f_unconnected_binned.mean()
 
 
 # %% save variables
@@ -248,8 +255,8 @@ path = "/work/bm1183/m301049/icon_arts_processed/derived_quantities/"
 
 lc_vars.to_netcdf(path + "lc_vars.nc")
 
-with open(path + "mean_lc_vars.pkl", "wb") as f:
-    pickle.dump(mean_lc_vars, f)
+with open(path + "binned_lc_vars.pkl", "wb") as f:
+    pickle.dump(binned_lc_vars, f)
 
 with open(path + "R_t_params.pkl", "wb") as f:
     pickle.dump(result, f)
@@ -257,7 +264,7 @@ with open(path + "R_t_params.pkl", "wb") as f:
 with open(path + "alpha_t_params.pkl", "wb") as f:
     pickle.dump(popt, f)
 
-with open(path + "average_a_t_r_t.pkl", "wb") as f:
-    pickle.dump({'a_t': mean_cloud_albedo, 'R_t': lc_R_t}, f)
+with open(path + "mean_lc_vars.pkl", "wb") as f:
+    pickle.dump({'a_t': mean_cloud_albedo, 'R_t': lc_R_t, 'f':f_mean}, f)
 
 # %%

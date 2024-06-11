@@ -34,7 +34,7 @@ if not os.path.exists("plots/model_results/" + run):
     os.mkdir("plots/model_results/" + run)
 
 # %% plot results
-mask = lw_vars["mask_height"]
+mask = atms["mask_height"]
 IWP_bins = np.logspace(-5, 1, 50)
 fig, axes = plot_model_output_arts(
     result,

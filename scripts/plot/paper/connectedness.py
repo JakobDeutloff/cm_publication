@@ -21,7 +21,7 @@ with open(path + run + '.pkl', 'rb') as f:
 # %%  plot connectedness 
 liq_cld_cond = atms["LWC"] + atms["rain"]
 ice_cld_cond = atms["IWC"] + atms["snow"] + atms["graupel"]
-mask = lw_vars["mask_height"] & (atms["IWP"] > 1e-6) & (atms["LWP"] > 1e-6)
+mask = atms["mask_height"] & (atms["IWP"] > 1e-6) & (atms["LWP"] > 1e-6)
 iwp_bins = np.logspace(-5, 1, 7)
 fig, axes = plot_connectedness(atms, mask, liq_cld_cond, ice_cld_cond, mode='arts')
 fig.savefig(f"plots/paper/connectedness.png", dpi=500, bbox_inches="tight")

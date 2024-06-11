@@ -26,7 +26,7 @@ R_t_cs = cut_data(fluxes_3d['clearsky_lw_up']).isel(pressure=-1).mean().values
 SW_in = cut_data(fluxes_3d["clearsky_sw_down"]).isel(pressure=-1).mean().values
 
 # %% set mask ans bins 
-mask = lw_vars["mask_height"]
+mask = atms["mask_height"]
 IWP_bins = np.logspace(-5, 1, num=50)
 
 # %% calculate constants used in the model
@@ -48,7 +48,7 @@ for lc_fraction in tqdm(lc_fractions):
         albedo_cs = albedo_cs, 
         R_t_cs = R_t_cs,
         SW_in = SW_in,
-        T_hc = cut_data(lw_vars["h_cloud_temperature"], mask),
+        T_hc = cut_data(atms["hc_top_temperature"], mask),
         LWP = cut_data(atms['LWP'], mask),
         IWP = cut_data(atms['IWP'], mask),
         connectedness=False,
