@@ -62,19 +62,13 @@ for temp in temps:
         except:
             levels.loc[iwp, temp] = np.nan
 
-# %% calculate folded cre
+# %% calculate IWP Hist
 n_cells = len(ds_monsoon.lat) * len(ds_monsoon.lon)
-
 hist, edges = np.histogram(
     ds_monsoon["IWP"].where(ds_monsoon["mask_height"]), bins=cre_interpolated_average["IWP_bins"]
 )
 hist = hist / n_cells
-weighted_sw = cre_interpolated_average["connected_sw"] * hist
-weighted_lw = cre_interpolated_average["connected_lw"] * hist
-weighted_net = weighted_sw + weighted_lw
-weighted_sw_cm = result["SW_cre"] * hist
-weighted_lw_cm = result["LW_cre"] * hist
-weighted_net_cm = weighted_sw_cm + weighted_lw_cm
+
 
 # %% plot cloud occurence vs IWP percentiles
 fig, axes = plt.subplots(3, 1, figsize=(9, 10), height_ratios=[2, 1, 1], sharex=True)
@@ -150,6 +144,19 @@ axes[2].set_xlabel("Ice Water Path / kg m$^{-2}$")
 
 fig.savefig("plots/paper/cloud_profile_iwp.png", dpi=500, bbox_inches="tight")
 
+# %% calculate numbers for text 
+
+# max net CRE 
+max_net_cre = cre_interpolated_average["connected_net"].max().values
+iwp_max_net_cre = cre_interpolated_average.IWP[cre_interpolated_average["connected_net"].argmax()].values
+print(f"Max net CRE: {max_net_cre} at {iwp_max_net_cre}")
+#max IWP distribution
+iwp_max_hist = cre_interpolated_average.IWP[hist.argmax()].values
+print(f"Max IWP distribution: {iwp_max_hist}")
+# net HCRE at max IWP distribution
+net_hcre_max_hist = cre_interpolated_average["connected_net"][hist.argmax()].values
+print(f"Net HCRE at max IWP distribution: {net_hcre_max_hist}")
+
 # %% plot just CRE and IWP dist for poster 
 fig, axes = plt.subplots(2, 1, figsize=(6, 5), sharex=True, gridspec_kw={"height_ratios": [2, 1]})
 
@@ -176,9 +183,6 @@ axes[0].plot(
     color="k",
     linestyle="--",
 )
-#axes[0].plot(result.index, result["SW_cre"], color="blue")
-#axes[0].plot(result.index, result["LW_cre"], color="red")
-#axes[0].plot(result.index, result["SW_cre"] + result["LW_cre"], color="k")
 axes[0].plot(np.linspace(1 - 6, cre_interpolated_average.IWP.min(), 100), np.zeros(100), color="k")
 axes[0].plot([], [], color="grey", linestyle="--", label="ARTS")
 axes[0].plot([], [], color="grey", linestyle="-", label="Concept")
@@ -202,6 +206,6 @@ fig.legend(
     ncols=5
 )
 
-fig.savefig("plots/paper/cre_weighting_talk_without.png", dpi=500, bbox_inches="tight")
+#fig.savefig("plots/paper/cre_weighting_talk_without.png", dpi=500, bbox_inches="tight")
 
 # %%

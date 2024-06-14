@@ -13,13 +13,13 @@ atms, fluxes_3d, fluxes_3d_noice = load_atms_and_fluxes()
 parameters = load_parameters()
 model_results={}
 
-# %% calculate constants used in the model
-SW_in = cut_data(fluxes_3d["clearsky_sw_down"]).isel(pressure=-1).mean().values
-parameters["SW_in"] = SW_in
-
 # %% set mask ans bins 
 mask = atms["mask_height"]
 IWP_bins = np.logspace(-5, 1, num=50)
+
+# %% calculate constants used in the model
+SW_in = cut_data(fluxes_3d["clearsky_sw_down"]).isel(pressure=-1).mean().values
+parameters["SW_in"] = SW_in
 
 
 # %% run model for all profiles with cloud tops above 350 hPa 

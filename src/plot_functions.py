@@ -769,7 +769,7 @@ def plot_model_output_arts_with_cre(
     cmap = LinearSegmentedColormap.from_list("my_cmap", colors)
     sc_rt = ax5.scatter(
         cut_data(atms["IWP"], atms["mask_height"]),
-        cut_data_mixed(
+        (-1) * cut_data_mixed(
             fluxes_3d_noice["clearsky_lw_up"].isel(pressure=-1),
             fluxes_3d_noice["allsky_lw_up"].isel(pressure=-1),
             atms["mask_height"],
@@ -791,16 +791,16 @@ def plot_model_output_arts_with_cre(
         )
         .groupby_bins(cut_data(atms["IWP"], atms["mask_height"]), bins=IWP_bins)
         .mean()
-    )
+    ) * (-1)
     ax5.plot(IWP_points, mean_rt, color="orange", label="Mean")
-    ax5.axhline(params["R_cs"], color="grey", linestyle="--", label="Clearsky")
-    ax5.axhline(params["R_l"], color="navy", linestyle="--", label="Low Cloud")
+    ax5.axhline(-params["R_cs"], color="grey", linestyle="--", label="Clearsky")
+    ax5.axhline(-params["R_l"], color="navy", linestyle="--", label="Low Cloud")
     ax5.plot(
-        result["R_t"], color="red", linestyle="--", label=r"Superposition + $C_{\mathrm{H_2O}}$"
+        -result["R_t"], color="red", linestyle="--", label=r"Superposition + $C_{\mathrm{H_2O}}$"
     )
     ax5.set_ylabel(r"LT LW Emissions ($\mathrm{R_t}$) / $\mathrm{W ~ m^{-2}}$")
     ax5.legend()
-    ax5.set_ylim(-350, -200)
+    ax5.set_ylim(200, 350)
 
     # a_t
     ax6 = fig.add_subplot(6, 2, 6)

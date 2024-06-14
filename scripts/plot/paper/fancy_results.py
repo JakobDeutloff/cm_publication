@@ -92,7 +92,7 @@ fig, axes = plot_model_output_arts_with_cre(
     parameters,
     cre_average,
 )
-# fig.savefig("plots/paper/fancy_results_with_cre.png", dpi=500, bbox_inches="tight")
+fig.savefig("plots/paper/fancy_results_with_cre.png", dpi=500, bbox_inches="tight")
 
 # %% plot CRE Comparison
 fig, ax = plt.subplots(figsize=(6, 4))

@@ -9,6 +9,7 @@ from src.read_data import load_atms_and_fluxes
 from src.plot_functions import scatterplot
 from scipy.optimize import curve_fit
 import matplotlib as mpl
+import os
 
 # %% load freddis data
 atms, fluxes_3d, fluxes_3d_noice = load_atms_and_fluxes()
@@ -61,7 +62,7 @@ y = y[nan_mask]
 
 popt, pcov = curve_fit(logistic, x, y)
 popt[0] = 1
-popt[2] = 2.6
+# popt[2] = 2.6
 logistic_curve = logistic(np.log10(IWP_points), *popt)
 
 # %% plot mean hv emissivity in scatterplot with IWP
@@ -109,11 +110,14 @@ fig.savefig("plots/p_top.png", dpi=300, bbox_inches="tight")
 # %% save coefficients as pkl file
 path = "/work/bm1183/m301049/icon_arts_processed/derived_quantities/"
 
+os.remove(path + "lw_vars.nc")
 lw_vars.to_netcdf(path + "lw_vars.nc")
 
+os.remove(path + "mean_lw_vars.pkl")
 with open(path + "mean_lw_vars.pkl", "wb") as f:
     pickle.dump(mean_lw_vars, f)
 
+os.remove(path + "hc_emissivity_params.pkl")
 with open(path + "/hc_emissivity_params.pkl", "wb") as f:
     pickle.dump(popt, f)
 

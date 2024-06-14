@@ -31,7 +31,7 @@ def sum_cre(result, sample, iwp_bins, mode='icon'):
     }
 
 # %% calculate sum_cre for each ensemble member
-IWP_bins = np.logspace(-5, np.log10(50), 60)
+IWP_bins = np.logspace(-5, 1, num=50)
 idx = [float(i) for i in list(ensemble.keys())]
 sum_cre_ensemble = pd.DataFrame(index=idx, columns=['SW', 'LW', 'net'])
 for key, result in ensemble.items():
@@ -52,5 +52,9 @@ ax.set_ylabel('HCRE / W m$^{-2}$')
 fig.legend(handles=ax.lines, labels=['SW', 'LW', 'Net'], loc='upper right', bbox_to_anchor=(0.75, -0.01), ncols=3)
 fig.savefig('plots/paper/lc_sensitivity.png', dpi=500, bbox_inches='tight')
 
+
+# %% numbers for lc fraction increase 
+cre = sum_cre_ensemble.iloc[3]['net']
+print(f'Net HCRE for 0.3 low cloud fraction: {cre:.2f} W m^-2')
 
 # %%
