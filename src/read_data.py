@@ -65,33 +65,31 @@ def load_derived_vars():
     path = "/work/bm1183/m301049/icon_arts_processed/derived_quantities/"
     lw_vars = xr.open_dataset(path + "lw_vars.nc")
     sw_vars = xr.open_dataset(path + "sw_vars.nc")
-    lc_vars = xr.open_dataset(path + "lc_vars.nc")
+    lc_vars = xr.open_dataset(path + "lower_trop_vars.nc")
     return lw_vars, sw_vars, lc_vars
-
 
 def load_binned_derived_variables():
     """
-    Load the binned and averaged derived variables.
+    Load the binned derived variables.
 
     Returns
     -------
-    lw_vars : pd:Dataframe
-        Longwave variables.
-    sw_vars : pd.Dataframe
-        Shortwave variables.
-    lc_vars : pd.Dataframe
-        Low cloud variables.
+    lw_vars_avg : xarray.Dataset
+        Longwave variables binned.
+    sw_vars_avg : xarray.Dataset
+        Shortwave variables binned.
+    lower_trop_vars_avg : xarray.Dataset
+        Lower Troposphere variables binned.
     """
 
     path = "/work/bm1183/m301049/icon_arts_processed/derived_quantities/"
-    with open(path + "mean_lw_vars.pkl", "rb") as f:
-        lw_vars = pickle.load(f)
     with open(path + "mean_sw_vars.pkl", "rb") as f:
-        sw_vars = pickle.load(f)
-    with open(path + "binned_lc_vars.pkl", "rb") as f:
-        lc_vars = pickle.load(f)
-    return lw_vars, sw_vars, lc_vars
-
+        sw_vars_avg = pickle.load(f)
+    with open(path + "mean_lw_vars.pkl", "rb") as f:
+        lw_vars_avg = pickle.load(f)
+    with open(path + "mean_lower_trop_vars.pkl", "rb") as f:
+        lower_trop_vars_avg = pickle.load(f)
+    return lw_vars_avg, sw_vars_avg, lower_trop_vars_avg
 
 def load_parameters():
     """
@@ -103,45 +101,28 @@ def load_parameters():
         Parameters for the high cloud albedo.
     hc_emissivity : dict
         Parameters for the high cloud emissivity.
-    alpha_t : dict
-        Parameters for the LWP dependence of R_t.
-    R_t : dict
-        Parameters for the LWP dependence of alpha_t."""
+    """
 
     path = "/work/bm1183/m301049/icon_arts_processed/derived_quantities/"
     with open(path + "hc_albedo_params.pkl", "rb") as f:
         hc_albedo = pickle.load(f)
     with open(path + "hc_emissivity_params.pkl", "rb") as f:
         hc_emissivity = pickle.load(f)
-    with open(path + "alpha_t_params.pkl", "rb") as f:
-        alpha_t = pickle.load(f)
-    with open(path + "R_t_params.pkl", "rb") as f:
-        R_t = pickle.load(f)
-    with open(path + "water_vapor_dependence.pkl", "rb") as f:
-        h2o_dependence = pickle.load(f)
+    with open(path + "C_h2o.pkl", "rb") as f:
+        c_h2o = pickle.load(f)
+    with open(path + "lower_trop_params.pkl", "rb") as f:
+        lower_trop_params = pickle.load(f)
 
     return {
         "alpha_hc": hc_albedo,
         "em_hc": hc_emissivity,
-        "alpha_t": alpha_t,
-        "R_t": R_t,
-        "h2o_dependence": h2o_dependence,
+        "c_h2o": c_h2o,
+        "R_l": lower_trop_params["R_l"],
+        "R_cs": lower_trop_params["R_cs"],
+        "f": lower_trop_params["f"],
+        "a_l": lower_trop_params["a_l"],
+        "a_cs": lower_trop_params["a_cs"],
     }
-
-def load_average_lc_parameters():
-    """
-    Load the average lc parameters needed for the model.
-    
-    Returns
-    -------
-    average_lc_params : dict
-        Average parameters for a_t and R_t."""
-
-    path = "/work/bm1183/m301049/icon_arts_processed/derived_quantities/"
-    with open(path + "mean_lc_vars.pkl", "rb") as f:
-        mean_lc_params = pickle.load(f)
-
-    return mean_lc_params
 
 def load_binned_atms():
     """

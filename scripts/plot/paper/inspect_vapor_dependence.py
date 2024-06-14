@@ -27,7 +27,7 @@ cell_height = xr.concat([cell_height_bottom, cell_height], dim="pressure")
 
 col_h2o = (atms['H2O'] * cell_height).sum('pressure')
 # %% plot R_t at locations without low clouds against IWP and color with column water vapor
-mask = lw_vars['mask_hc_no_lc']
+mask = atms['mask_height'] 
 
 fig, ax = plt.subplots(1, 1, figsize=(6, 4))
 sc = ax.scatter(
@@ -103,9 +103,5 @@ ax.spines['right'].set_visible(False)
 ax.spines['top'].set_visible(False)
 ax.set_xlabel('IWP / kg/m$^2$')
 ax.set_ylabel('R$_t$ / W/m$^2$')
-
-# %% export parameters
-with open('/work/bm1183/m301049/icon_arts_processed/derived_quantities/water_vapor_dependence.pkl', 'wb') as f:
-    pickle.dump(res, f)
 
 # %%

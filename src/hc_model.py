@@ -160,11 +160,9 @@ def calc_hc_emissivity(IWP, em_hc_params):
 
 
 def calc_alpha_t(
-    LWP,
     lc_fraction,
     albedo_cs,
-    alpha_t_params,
-    const_lc_quantities,
+    albedo_l,
     prescribed_lc_quantities,
 ):
     """
@@ -190,25 +188,18 @@ def calc_alpha_t(
     avg_value: array-like
         Albedo below high clouds.
     """
-    if const_lc_quantities is not None:
-        lc_value = const_lc_quantities["a_t"]
-    else:
-        lc_value = logistic(np.log10(LWP), *alpha_t_params)
-    cs_value = albedo_cs
-    avg_value = lc_fraction * lc_value + (1 - lc_fraction) * cs_value
+    avg_value = lc_fraction * albedo_l + (1 - lc_fraction) * albedo_cs
     if prescribed_lc_quantities is not None:
         avg_value = prescribed_lc_quantities["a_t"]
     return avg_value
 
 
 def calc_R_t(
-    LWP,
     IWP,
     lc_fraction,
-    R_t_cs,
-    R_t_params,
-    h20_params,
-    const_lc_quantities,
+    R_cs,
+    R_l,
+    c_h20_params,
     prescribed_lc_quantities,
 ):
     """
@@ -238,16 +229,11 @@ def calc_R_t(
     avg_value: array-like
         LW radiation from below high clouds.
     """
-    if const_lc_quantities is not None:
-        lc_value = const_lc_quantities["R_t"]
-    else:
-        lc_value = R_t_params.slope * np.log10(LWP) + R_t_params.intercept
-        lc_value[lc_value < R_t_cs] = R_t_cs
-    h2o_correction = h20_params.slope * np.log10(IWP) + h20_params.intercept
-    avg_value = lc_fraction * lc_value + (1 - lc_fraction) * R_t_cs + h2o_correction
+    h2o_correction = c_h20_params.slope * np.log10(IWP) + c_h20_params.intercept
+    avg_value = lc_fraction * R_l + (1 - lc_fraction) * R_cs + h2o_correction
     if prescribed_lc_quantities is not None:
         avg_value = prescribed_lc_quantities["R_t"]
-    return avg_value, h2o_correction
+    return avg_value
 
 
 def hc_sw_cre(alpha_hc, alpha_t, SW_in):
@@ -350,15 +336,11 @@ def ac_lw_cre(emm_hc, T_h, R_t, R_cs, h20_corr, sigma):
 
 def run_model(
     IWP_bins,
-    albedo_cs,
-    R_t_cs,
-    SW_in,
     T_hc,
     LWP,
     IWP,
     connectedness,
     parameters,
-    const_lc_quantities=None,
     prescribed_lc_quantities=None,
     liquid_in_albedo=False,
 ):
@@ -399,10 +381,10 @@ def run_model(
     IWP_points = (IWP_bins[1:] + IWP_bins[:-1]) / 2
 
     # calculate lc fraction if needed
-    if parameters["lc_fraction"] is None:
+    if parameters["f"] is None:
         lc_fraction = calc_lc_fraction(LWP, connected=connectedness)
     else:
-        lc_fraction = parameters["lc_fraction"]
+        lc_fraction = parameters["f"]
 
     # bin the input data
     T_hc_binned = binning(IWP_bins, T_hc, IWP)
@@ -411,45 +393,27 @@ def run_model(
 
     # calculate radiative properties below high clouds
     alpha_t = calc_alpha_t(
-        LWP_binned,
-        lc_fraction_binned,
-        albedo_cs,
-        parameters["alpha_t"],
-        const_lc_quantities,
-        prescribed_lc_quantities,
+        lc_fraction=lc_fraction_binned,
+        albedo_cs=parameters['a_cs'],
+        albedo_l=parameters["a_l"],
+        prescribed_lc_quantities=prescribed_lc_quantities,
     )
-    R_t, h2o_corr = calc_R_t(
-        LWP_binned,
+    R_t = calc_R_t(
         IWP_points,
         lc_fraction_binned,
-        R_t_cs,
-        parameters["R_t"],
-        parameters["h2o_dependence"],
-        const_lc_quantities,
+        parameters["R_cs"],
+        parameters["R_l"],
+        parameters["c_h2o"],
         prescribed_lc_quantities,
     )
 
     # calculate radiative properties of high clouds
-
-    if liquid_in_albedo:
-        lc_fraction_raw = calc_lc_fraction(LWP, connected=0)
-        delta_f = lc_fraction_raw - lc_fraction
-        delta_f_binned = binning(IWP_bins, delta_f, IWP)
-        alpha_ice = calc_ice_albedo(IWP_points, parameters["alpha_hc"])
-        alpha_mixed = calc_mixed_albedo(alpha_ice, const_lc_quantities["a_t"])
-        alpha_hc = calc_hc_albedo(alpha_ice, alpha_mixed, delta_f_binned)
-    else:
-        alpha_hc = calc_ice_albedo(IWP_points, parameters["alpha_hc"])
-
+    alpha_hc = calc_ice_albedo(IWP_points, parameters["alpha_hc"])
     em_hc = calc_hc_emissivity(IWP_points, parameters["em_hc"])
 
     # calculate HCRE
-    SW_cre = hc_sw_cre(alpha_hc, alpha_t, SW_in)
+    SW_cre = hc_sw_cre(alpha_hc, alpha_t, parameters["SW_in"])
     LW_cre = hc_lw_cre(em_hc, T_hc_binned, R_t, sigma=5.67e-8)
-
-    # calculate CRE of entire cloud population
-    SW_cre_ac = ac_sw_cre(albedo_cs, alpha_t, alpha_hc, SW_in)
-    LW_cre_ac = ac_lw_cre(em_hc, T_hc_binned, R_t, R_t_cs, h2o_corr, sigma=5.67e-8)
 
     # build results df
     results = pd.DataFrame()
@@ -464,7 +428,5 @@ def run_model(
     results["em_hc"] = em_hc
     results["SW_cre"] = SW_cre
     results["LW_cre"] = LW_cre
-    results["SW_cre_ac"] = SW_cre_ac
-    results["LW_cre_ac"] = LW_cre_ac
 
     return results

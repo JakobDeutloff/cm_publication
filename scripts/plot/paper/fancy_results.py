@@ -6,7 +6,6 @@ from src.read_data import (
     load_binned_derived_variables,
     load_parameters,
     load_cre,
-    load_average_lc_parameters,
 )
 from src.plot_functions import (
     plot_model_output_arts_reduced,
@@ -21,13 +20,11 @@ import matplotlib.pyplot as plt
 
 # %% load data
 atms, fluxes_3d, fluxes_3d_noice = load_atms_and_fluxes()
-lw_vars, sw_vars, lc_vars = load_derived_vars()
+lw_vars, sw_vars, lower_trop_vars = load_derived_vars()
 lw_vars_avg, sw_vars_avg, lc_vars_avg = load_binned_derived_variables()
 parameters = load_parameters()
 cre_binned, cre_interpolated, cre_average = load_cre()
-const_lc_quantities = load_average_lc_parameters()
 atms_raw = xr.open_dataset("/work/bm1183/m301049/nextgems_profiles/monsoon/raw_data_converted.nc")
-
 path = "/work/bm1183/m301049/cm_results/"
 run = "icon_mons_const_lc"
 with open(path + run + ".pkl", "rb") as f:
@@ -47,10 +44,6 @@ f_unconnected_binned = f_unconnected.groupby_bins(
 ).mean()
 f_vals = {"raw": f_raw_binned, "unconnected": f_unconnected_binned}
 
-# %% calculate clearsky constants
-albedo_cs = cut_data(fluxes_3d["albedo_clearsky"]).mean().values
-R_t_cs = cut_data(fluxes_3d["clearsky_lw_up"]).isel(pressure=-1).mean().values
-cs_constants = {"a_t": albedo_cs, "R_t": R_t_cs}
 
 # %% plot reduced results
 fig, axes = plot_model_output_arts_reduced(
@@ -96,11 +89,10 @@ fig, axes = plot_model_output_arts_with_cre(
     lw_vars_avg,
     sw_vars_avg,
     f_vals,
-    const_lc_quantities,
-    cs_constants,
+    parameters,
     cre_average,
 )
-fig.savefig("plots/paper/fancy_results_with_cre.png", dpi=500, bbox_inches="tight")
+# fig.savefig("plots/paper/fancy_results_with_cre.png", dpi=500, bbox_inches="tight")
 
 # %% plot CRE Comparison
 fig, ax = plt.subplots(figsize=(6, 4))

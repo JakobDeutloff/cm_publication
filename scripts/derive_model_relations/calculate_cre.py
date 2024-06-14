@@ -293,8 +293,8 @@ cre_interpolated_average_xr["connected_lw"] = xr.DataArray(
 cre_interpolated_average_xr = cre_interpolated_average_xr.assign_coords({"IWP_bins": IWP_bins})
 
 path = "/work/bm1183/m301049/icon_arts_processed/derived_quantities/"
-os.remove(path + "cre.nc")
-os.remove(path + "cre_binned.nc")
+#os.remove(path + "cre.nc")
+#os.remove(path + "cre_binned.nc")
 os.remove(path + "cre_interpolated.nc")
 os.remove(path + "cre_interpolated_average.nc")
 cre_xr.to_netcdf(path + "cre.nc")

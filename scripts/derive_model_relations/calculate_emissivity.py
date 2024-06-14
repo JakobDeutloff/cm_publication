@@ -61,6 +61,7 @@ y = y[nan_mask]
 
 popt, pcov = curve_fit(logistic, x, y)
 popt[0] = 1
+popt[2] = 2.6
 logistic_curve = logistic(np.log10(IWP_points), *popt)
 
 # %% plot mean hv emissivity in scatterplot with IWP

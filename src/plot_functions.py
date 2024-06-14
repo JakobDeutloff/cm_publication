@@ -700,8 +700,7 @@ def plot_model_output_arts_with_cre(
     lw_binned_vars,
     sw_binned_vars,
     f_lc_vals,
-    lc_consts,
-    cs_consts,
+    params,
     cre_average,
 ):
     fig = plt.figure(figsize=(12, 18))
@@ -794,8 +793,8 @@ def plot_model_output_arts_with_cre(
         .mean()
     )
     ax5.plot(IWP_points, mean_rt, color="orange", label="Mean")
-    ax5.axhline(cs_consts["R_t"], color="grey", linestyle="--", label="Clearsky")
-    ax5.axhline(lc_consts["R_t"], color="navy", linestyle="--", label="Low Cloud")
+    ax5.axhline(params["R_cs"], color="grey", linestyle="--", label="Clearsky")
+    ax5.axhline(params["R_l"], color="navy", linestyle="--", label="Low Cloud")
     ax5.plot(
         result["R_t"], color="red", linestyle="--", label=r"Superposition + $C_{\mathrm{H_2O}}$"
     )
@@ -831,8 +830,8 @@ def plot_model_output_arts_with_cre(
         .mean()
     )
     ax6.plot(IWP_points, mean_a_t, color="orange", label="Mean")
-    ax6.axhline(cs_consts["a_t"], color="grey", linestyle="--", label="Clearsky")
-    ax6.axhline(lc_consts["a_t"], color="navy", linestyle="--", label="Low Cloud")
+    ax6.axhline(params["a_cs"], color="grey", linestyle="--", label="Clearsky")
+    ax6.axhline(params["a_l"], color="navy", linestyle="--", label="Low Cloud")
     ax6.plot(result["alpha_t"], color="red", linestyle="--", label="Superposition")
     ax6.set_ylabel(r"LT Albedo ($\alpha_t$)")
     ax6.legend()
