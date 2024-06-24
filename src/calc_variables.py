@@ -385,7 +385,7 @@ def calc_cf(ds):
     If cloud condensate exceeds 10^-6 kg/m^3, it is set to 1, otherwise to 0.
     """
     cf = (
-        (ds["IWC"] + ds["LWC"] + ds["rain"] + ds["snow"] + ds["graupel"]) > 5 * 10 ** (-9)
+        (ds["IWC"] + ds["LWC"] + ds["rain"] + ds["snow"] + ds["graupel"]) >  4*10 ** (-8)
     ).astype(int)
     cf.attrs = {
         "component": "atmo",

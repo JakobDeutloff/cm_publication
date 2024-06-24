@@ -12,4 +12,4 @@
 export PYTHONPATH="${PYTHONPATH}:/home/m/m301049/HcModel/"
 
 # execute python script in respective environment 
-/home/m/m301049/miniconda3/envs/defaultenv/bin/python /home/m/m301049/HcModel/scripts/process_data/process_fluxes_c3.py
+/home/m/m301049/miniconda3/envs/defaultenv/bin/python /home/m/m301049/HcModel/scripts/process_data/interpolate_cf_to_pressure_monsoon.py

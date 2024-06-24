@@ -582,7 +582,7 @@ def plot_num_connected(sample, ax, min, max, mask):
     n_profiles = (~np.isnan(connected) * 1).sum().values
     connected_profiles = connected.sum().values
 
-    ax.text(0.05, 0.8, f"IWP Bin: {min:.0e} - {max:.0e}", transform=ax.transAxes)
+    ax.text(0.05, 0.8, f"$I$-Bin : {min:.0e} - {max:.0e}", transform=ax.transAxes)
     ax.text(0.05, 0.675, f"Number of Profiles: {n_profiles:.0f}", transform=ax.transAxes)
     ax.text(
         0.05,
@@ -715,8 +715,8 @@ def plot_model_output_arts_with_cre(
         s=0.1,
         color="grey",
     )
-    ax1.plot(result["T_hc"], color="red", linestyle="--", label="Mean")
-    ax1.set_ylabel(r"HC Temperature ($\mathrm{T_{h}}$) / K")
+    ax1.plot(result["T_hc"], color="red", linestyle="--", label=r"$T(I)$")
+    ax1.set_ylabel(r"HC Temperature / K")
     ax1.legend()
 
     # emissivity
@@ -728,24 +728,24 @@ def plot_model_output_arts_with_cre(
         color="grey",
     )
     ax2.plot(lw_binned_vars["binned_emissivity"], color="orange", label="Mean")
-    ax2.plot(result["em_hc"], color="red", label="Fitted Logistic", linestyle="--")
-    ax2.set_ylabel(r"HC Emissivity ($\epsilon$)")
+    ax2.plot(result["em_hc"], color="red", label=r"$\varepsilon(I)$", linestyle="--")
+    ax2.set_ylabel(r"HC Emissivity")
     ax2.legend()
 
     # lc fraction
     ax3 = fig.add_subplot(6, 2, 3)
-    ax3.plot(IWP_points, f_lc_vals["raw"], label="All", color="grey")
+    ax3.plot(IWP_points, f_lc_vals["raw"], label=r"Mean $f_{\mathrm{all}}$", color="grey")
     ax3.plot(
-        IWP_points, f_lc_vals["unconnected"], label="Unconnected", color="purple", linestyle="--"
+        IWP_points, f_lc_vals["unconnected"], label=r"Mean $f_{\mathrm{uncon}}$", color="purple", linestyle="--"
     )
     ax3.plot(
         result["lc_fraction"],
         color="red",
         linestyle="--",
-        label="Constant",
+        label=r"$f$",
     )
     ax3.legend()
-    ax3.set_ylabel(r"Low Cloud Fraction ($f$)")
+    ax3.set_ylabel(r"Low Cloud Fraction")
 
     # alpha
     ax4 = fig.add_subplot(6, 2, 4)
@@ -758,8 +758,8 @@ def plot_model_output_arts_with_cre(
         cmap="viridis",
     )
     ax4.plot(sw_binned_vars["interpolated_albedo"], color="orange", label="Mean")
-    ax4.plot(result["alpha_hc"], color="red", linestyle="--", label="Fitted Logistic")
-    ax4.set_ylabel(r"HC Albedo ($\alpha$)")
+    ax4.plot(result["alpha_hc"], color="red", linestyle="--", label=r"$\alpha_{\mathrm{h}}(I)$")
+    ax4.set_ylabel(r"HC Albedo")
     ax4.legend()
 
 
@@ -793,12 +793,12 @@ def plot_model_output_arts_with_cre(
         .mean()
     ) * (-1)
     ax5.plot(IWP_points, mean_rt, color="orange", label="Mean")
-    ax5.axhline(-params["R_cs"], color="grey", linestyle="--", label="Clearsky")
-    ax5.axhline(-params["R_l"], color="navy", linestyle="--", label="Low Cloud")
+    ax5.axhline(-params["R_cs"], color="black", linestyle="--", label=r"$R_{\mathrm{cs}}$")
+    ax5.axhline(-params["R_l"], color="navy", linestyle="--", label=r"$R_{\mathrm{l}}$")
     ax5.plot(
-        -result["R_t"], color="red", linestyle="--", label=r"Superposition + $C_{\mathrm{H_2O}}$"
+        -result["R_t"], color="red", linestyle="--", label=r"$R_{\mathrm{t}}(I)$"
     )
-    ax5.set_ylabel(r"LT LW Emissions ($\mathrm{R_t}$) / $\mathrm{W ~ m^{-2}}$")
+    ax5.set_ylabel(r"LT LW Emissions / $\mathrm{W ~ m^{-2}}$")
     ax5.legend()
     ax5.set_ylim(200, 350)
 
@@ -830,10 +830,10 @@ def plot_model_output_arts_with_cre(
         .mean()
     )
     ax6.plot(IWP_points, mean_a_t, color="orange", label="Mean")
-    ax6.axhline(params["a_cs"], color="grey", linestyle="--", label="Clearsky")
-    ax6.axhline(params["a_l"], color="navy", linestyle="--", label="Low Cloud")
-    ax6.plot(result["alpha_t"], color="red", linestyle="--", label="Superposition")
-    ax6.set_ylabel(r"LT Albedo ($\alpha_t$)")
+    ax6.axhline(params["a_cs"], color="black", linestyle="--", label=r"$\alpha_{\mathrm{cs}}$")
+    ax6.axhline(params["a_l"], color="navy", linestyle="--", label=r"$\alpha_{\mathrm{l}}$")
+    ax6.plot(result["alpha_t"], color="red", linestyle="--", label=r"$\alpha_{\mathrm{t}}$")
+    ax6.set_ylabel(r"LT Albedo")
     ax6.legend()
 
     # CRE
@@ -845,9 +845,6 @@ def plot_model_output_arts_with_cre(
     ax7.plot(result.index, result['LW_cre'], color='red')
     ax7.plot(result.index, result['SW_cre'] + result['LW_cre'], color='black')
     ax7.set_xscale('log')
-    ax7.set_xlim(1e-5, 1)
-    ax7.set_xlabel('IWP / kg m$^{-2}$')
-    ax7.set_ylabel('HCRE / W m$^{-2}$')
     # make legend with fake handles and labels 
     handles = [plt.Line2D([0], [0], color='grey', linestyle='--'), plt.Line2D([0], [0], color='grey'), plt.Line2D([0], [0], color='red', linestyle='-'), plt.Line2D([0], [0], color='blue', linestyle='-'), plt.Line2D([0], [0], color='black', linestyle='-')]
     labels = ['ARTS', 'Conceptual Model', 'LW', 'SW', 'Net']
@@ -870,7 +867,8 @@ def plot_model_output_arts_with_cre(
     ax5.set_xticklabels(["1e-5", "1e-4", "1e-3", "1e-2", "1e-1", "1e0", "1e1"])
     ax6.set_xticklabels(["1e-5", "1e-4", "1e-3", "1e-2", "1e-1", "1e0", "1e1"])
     ax7.set_xticklabels(["1e-5", "1e-4", "1e-3", "1e-2", "1e-1", "1e0", "1e1"])
-    ax7.set_xlabel("Ice Water Path / kg m$^{-2}$")
+    ax7.set_xlabel('$I$ / kg m$^{-2}$')
+    ax7.set_ylabel('$C(I)$ / W m$^{-2}$')
     
 
 

@@ -62,7 +62,7 @@ for ax in axes:
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     ax.set_xscale("log")
-    ax.set_xlabel("IWP / kg m$^{-2}$")
+    ax.set_xlabel("$I$ / kg m$^{-2}$")
     ax.set_xlim(1e-5, 1e1)
     ax.set_xticks([1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 10])
     ax.text(
@@ -76,7 +76,7 @@ for ax in axes:
         ha="right",
     )
 
-axes[0].set_ylabel("FCRE / W m$^{-2}$")
+axes[0].set_ylabel(r"$C_{\mathrm{frozen}}(I)$ / W m$^{-2}$")
 axes[0].set_title("LWP < $10^{-4}$ kg m$^{-2}$")
 axes[1].set_title("LWP > $10^{-4}$ kg m$^{-2}$")
 axes[2].set_title("All LWP")

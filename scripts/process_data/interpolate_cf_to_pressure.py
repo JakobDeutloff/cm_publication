@@ -9,7 +9,6 @@ from tqdm import tqdm
 ds = xr.open_dataset(
     "/work/bm1183/m301049/nextgems_profiles/cycle3/representative_sample_c3_conn3.nc"
 )
-
 # %% calculate cloud fraction
 ds["cf"] = calc_cf(ds)
 

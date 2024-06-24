@@ -14,19 +14,16 @@ def control_plot(ax):
 
 # %% load data
 cre_binned, cre_interpolated, cre_interpolated_average = load_cre()
-ds = xr.open_dataset(
-    "/work/bm1183/m301049/nextgems_profiles/cycle3/interp_representative_sample.nc"
-)
-ds_monsoon = xr.open_dataset("/work/bm1183/m301049/nextgems_profiles/monsoon/raw_data_converted.nc")
-path = "/work/bm1183/m301049/cm_results/"
-run = "icon_mons_const_lc"
-with open(path + run + ".pkl", "rb") as f:
-    result = pickle.load(f)
+#ds = xr.open_dataset(
+ #   "/work/bm1183/m301049/nextgems_profiles/cycle3/interp_representative_sample.nc"
+#)
+ds= xr.open_dataset("/work/bm1183/m301049/nextgems_profiles/monsoon/interp_cf.nc")
+ds_monsoon = xr.open_dataset('/work/bm1183/m301049/nextgems_profiles/monsoon/raw_data_converted.nc')
 
 # %% bin by IWP and average
 IWP_bins = np.logspace(-6, 2, 70)
 IWP_points = (IWP_bins[:-1] + np.diff(IWP_bins)) / 2
-ds_binned = ds.groupby_bins("IWP", IWP_bins).mean(["stacked_time_cell"])
+ds_binned = ds.groupby_bins("IWP", IWP_bins).mean()
 
 # %% find the two model levels closest to temperature and interpolate the pressure_lev coordinate between them
 temps = [273.15]
@@ -82,7 +79,7 @@ cf = axes[0].contourf(
     levels=np.arange(0.1, 1.1, 0.1),
 )
 axes[0].plot(IWP_points, levels[273.15].values / 100, color="grey", linestyle="--")
-axes[0].text(2e-6, 590, "0°C", color="grey", fontsize=11)
+axes[0].text(2e-5, 560, "0°C", color="grey", fontsize=11)
 axes[0].invert_yaxis()
 axes[0].set_ylabel("Pressure / hPa")
 axes[0].set_yticks([1000, 600, 200])
@@ -111,12 +108,12 @@ axes[1].plot(
     linestyle="-",
 )
 axes[1].plot(np.linspace(1 - 6, cre_interpolated_average.IWP.min(), 100), np.ones(100)*cre_interpolated_average['connected_net'][0].values, color="k")
-axes[1].set_ylabel("HCRE / W m$^{-2}$")
+axes[1].set_ylabel("$C(I)$ / W m$^{-2}$")
 
 # plot IWP dist
 axes[2].stairs(hist, edges, label="IWP", color="black")
 axes[2].set_xscale("log")
-axes[2].set_ylabel("P")
+axes[2].set_ylabel("$P(I)$")
 
 # add colorbar
 fig.subplots_adjust(right=0.8)
@@ -134,15 +131,26 @@ fig.legend(
 )
 
 # format axes
+labels=["a", "b", "c"]
 for ax in axes:
     ax.spines[["top", "right"]].set_visible(False)
-    ax.set_xlim(1e-6, 10)
+    ax.set_xlim(1e-5, 10)
     ax.set_xticks([1e1, 1e0, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5])
     ax.set_xscale("log")
+    ax.text(
+    0.05,
+    1.12,
+    labels.pop(0),
+    transform=ax.transAxes,
+    fontsize=14,
+    fontweight="bold",
+    va="top",
+    ha="right",
+    )
 
-axes[2].set_xlabel("Ice Water Path / kg m$^{-2}$")
+axes[2].set_xlabel("$I$ / kg m$^{-2}$")
 
-fig.savefig("plots/paper/cloud_profile_iwp.png", dpi=500, bbox_inches="tight")
+fig.savefig("plots/paper/cloud_profile_iwp_mons.png", dpi=500, bbox_inches="tight")
 
 # %% calculate numbers for text 
 
