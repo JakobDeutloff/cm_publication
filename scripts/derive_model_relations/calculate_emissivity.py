@@ -1,43 +1,43 @@
 # %% import
 import numpy as np
 import xarray as xr
-import matplotlib.pyplot as plt
-from scipy.interpolate import griddata
 import pickle
 import pandas as pd
 from src.read_data import load_atms_and_fluxes
 from src.plot_functions import scatterplot
-from scipy.optimize import curve_fit
-import matplotlib as mpl
-import os
+from src.helper_functions import cut_data
+from scipy.optimize import least_squares
+import xarray as xr
 
 # %% load freddis data
-atms, fluxes_3d, fluxes_3d_noice = load_atms_and_fluxes()
+atms, fluxes_allsky, fluxes_noice = load_atms_and_fluxes()
+ds_monsoon = xr.open_dataset("/work/bm1183/m301049/iwp_framework/mons/data/full_snapshot_proc.nc")
+
 
 # %% initialize dataset for new variables
 lw_vars = xr.Dataset()
 mean_lw_vars = pd.DataFrame()
 
+# %% set mask
+mask_parameterisation = atms["mask_height"] & ~atms["mask_low_cloud"]
+
 # %% calculate high cloud emissivity
 sigma = 5.67e-8  # W m-2 K-4
-LW_out_as = fluxes_3d.isel(pressure=-1)["allsky_lw_up"]
-LW_out_cs = fluxes_3d_noice.isel(pressure=-1)["allsky_lw_up"]
+LW_out_as = fluxes_allsky.isel(pressure=-1)["allsky_lw_up"]
+LW_out_cs = fluxes_noice.isel(pressure=-1)["clearsky_lw_up"]
 rad_hc = -atms["hc_top_temperature"] ** 4 * sigma
 hc_emissivity = (LW_out_as - LW_out_cs) / (rad_hc - LW_out_cs)
+hc_emissivity = xr.where((hc_emissivity < -0.1) | (hc_emissivity > 1.5), np.nan, hc_emissivity)
 lw_vars["high_cloud_emissivity"] = hc_emissivity
 
 
 # %% aveage over IWP bins
-def cut_data(data, mask):
-    return data.where(mask).sel(lat=slice(-30, 30))
-
-
 IWP_bins = np.logspace(-5, 1, num=50)
 IWP_points = (IWP_bins[1:] + IWP_bins[:-1]) / 2
 mean_hc_emissivity = (
-    cut_data(lw_vars["high_cloud_emissivity"], atms["mask_height"] & atms["mask_hc_no_lc"])
+    cut_data(lw_vars["high_cloud_emissivity"], mask_parameterisation)
     .groupby_bins(
-        cut_data(atms["IWP"], atms["mask_height"] & atms["mask_hc_no_lc"]),
+        cut_data(atms["IWP"], mask_parameterisation),
         IWP_bins,
         labels=IWP_points,
     )
@@ -50,28 +50,40 @@ mean_lw_vars["binned_emissivity"] = mean_hc_emissivity
 
 
 # %% fit logistic function to mean high cloud emissivity
-def logistic(x, L, x0, k):
-    return L / (1 + np.exp(-k * (x - x0)))
 
-
+# prepare x and required y data
 x = np.log10(IWP_points)
 y = mean_lw_vars["binned_emissivity"].copy()
 nan_mask = ~np.isnan(y)
 x = x[nan_mask]
 y = y[nan_mask]
 
-popt, pcov = curve_fit(logistic, x, y)
-popt[0] = 1
-# popt[2] = 2.6
-logistic_curve = logistic(np.log10(IWP_points), *popt)
+# prepare weights
+n_cells = len(ds_monsoon.lat) * len(ds_monsoon.lon)
+hist, edges = np.histogram(ds_monsoon["IWP"].where(ds_monsoon["mask_height"]), bins=IWP_bins)
+hist = hist / n_cells
+hist = hist[nan_mask]
+
+#initial guess
+p0 = [3.25181808, -2.27406137]
+
+def logistic(params, x):
+    return 1 / (1 + np.exp(-params[1] * (x - params[0])))
+
+
+def loss(params):
+    return ((logistic(params, x) - y) * hist) / hist.sum()
+
+res = least_squares(loss, p0)
+logistic_curve = logistic(res.x, np.log10(IWP_points))
 
 # %% plot mean hv emissivity in scatterplot with IWP
 fig, ax = scatterplot(
-    cut_data(atms["IWP"], atms["mask_height"] & atms["mask_hc_no_lc"]),
-    cut_data(lw_vars["high_cloud_emissivity"], atms["mask_height"] & atms["mask_hc_no_lc"]),
+    cut_data(atms["IWP"], mask_parameterisation),
+    cut_data(lw_vars["high_cloud_emissivity"], mask_parameterisation),
     cut_data(
-        fluxes_3d_noice.isel(pressure=-1)["clearsky_sw_down"],
-        atms["mask_height"] & atms["mask_hc_no_lc"],
+        fluxes_noice.isel(pressure=-1)["clearsky_sw_down"],
+        mask_parameterisation,
     ),
     xlabel="IWP / kg m$^{-2}$",
     ylabel="High Cloud Emissivity",
@@ -84,42 +96,17 @@ ax.plot(IWP_points, mean_hc_emissivity, color="lime", label="Mean Emissivity")
 ax.plot(IWP_points, logistic_curve, color="r", label="Fitted logistic", linestyle="--")
 ax.axhline(1, color="grey", linestyle="--")
 ax.legend()
-fig.savefig("plots/emissivity.png", dpi=300, bbox_inches="tight")
-
-# %% plot p_top
-fig, ax = plt.subplots(figsize=(7, 5))
-sc = ax.scatter(
-    atms["IWP"].sel(lat=slice(-30, 30)),
-    atms['hc_top_pressure'].sel(lat=slice(-30, 30)) / 100,
-    s=0.1,
-    c=atms["LWP"].sel(lat=slice(-30, 30)),
-    norm=mpl.colors.LogNorm(vmin=1e-6),
-    cmap="viridis",
-)
-ax.set_xscale("log")
-ax.axhline(350, color="r")
-ax.invert_yaxis()
-cb = fig.colorbar(sc, extend="min")
-cb.set_label("LWP / kg m$^{-2}$")
-ax.set_xlabel("IWP / kg m$^{-2}$")
-ax.set_ylabel("p$_{top}$ / hPa")
-ax.spines["right"].set_visible(False)
-ax.spines["top"].set_visible(False)
-fig.savefig("plots/p_top.png", dpi=300, bbox_inches="tight")
 
 # %% save coefficients as pkl file
-path = "/work/bm1183/m301049/icon_arts_processed/derived_quantities/"
+path = "/work/bm1183/m301049/iwp_framework/mons/"
 
-os.remove(path + "lw_vars.nc")
-lw_vars.to_netcdf(path + "lw_vars.nc")
+lw_vars.to_netcdf(path + "data/lw_vars.nc")
 
-os.remove(path + "mean_lw_vars.pkl")
-with open(path + "mean_lw_vars.pkl", "wb") as f:
+with open(path + "parameters/hc_emissivity_params.pkl", "wb") as f:
+    pickle.dump(np.array([1., res.x[0], res.x[1]]), f)
+
+with open(path + "data/lw_vars_mean.pkl", "wb") as f:
     pickle.dump(mean_lw_vars, f)
-
-os.remove(path + "hc_emissivity_params.pkl")
-with open(path + "/hc_emissivity_params.pkl", "wb") as f:
-    pickle.dump(popt, f)
 
 
 # %%

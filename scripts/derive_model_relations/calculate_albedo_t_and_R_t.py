@@ -14,9 +14,9 @@ from matplotlib.colors import LinearSegmentedColormap, LogNorm
 
 # %% read data
 atms, fluxes_3d, fluxes_3d_noice = load_atms_and_fluxes()
-lw_vars = xr.open_dataset("/work/bm1183/m301049/icon_arts_processed/derived_quantities/lw_vars.nc")
+lw_vars = xr.open_dataset("/work/bm1183/m301049/iwp_framework/mons/data/lw_vars.nc")
 aux = xr.open_dataset(
-    "/work/bm1183/m301049/icon_arts_processed/fullrange_flux_mid1deg_noice/aux.nc"
+    "/work/bm1183/m301049/iwp_framework/mons/raw_data/fullrange_flux_mid1deg_noice/aux.nc"
 )
 
 # %% initialize dataset
@@ -26,19 +26,10 @@ binned_lower_trop_vars = pd.DataFrame()
 # %% set masks
 mask_low_cloud = atms["LWP"] > 1e-4
 mask_connected = atms["connected"] == 1
-mask_uncon_lc = (atms["LWP"] > 1e-4) & (~mask_connected)
 
 # %% calculate mean lc fraction
 iwp_bins = np.logspace(-5, 1, num=50)
-
-f_unconnected = calc_lc_fraction(
-    cut_data(atms["LWP"], atms["mask_height"]),
-    connected=cut_data(atms["connected"], atms["mask_height"]),
-)
-f_unconnected_binned = f_unconnected.groupby_bins(
-    cut_data(atms["IWP"], atms["mask_height"]), iwp_bins
-).mean()
-f_mean = float(f_unconnected_binned.mean().values)
+f_mean = atms['mask_low_cloud'].where(atms['mask_height']).sel(lat=slice(-30, 30)).mean().values.round(2)
 
 # %% calculate albedos
 albedo_allsky = np.abs(
@@ -51,7 +42,7 @@ albedo_clearsky = np.abs(
 )
 lower_trop_vars["albedo_allsky"] = albedo_allsky
 lower_trop_vars["albedo_clearsky"] = albedo_clearsky
-alpha_t = xr.where(mask_uncon_lc, albedo_allsky, albedo_clearsky)
+alpha_t = xr.where(atms['mask_low_cloud'], albedo_allsky, albedo_clearsky)
 lower_trop_vars["alpha_t"] = alpha_t
 
 # %% average and interpolate albedo
@@ -145,7 +136,7 @@ mean_cloud_albedo = float(
 
 mean_clearsky_albedo = float(
     (
-        (cut_data(lower_trop_vars["albedo_clearsky"], ~mask_uncon_lc & atms["mask_height"]))
+        (cut_data(lower_trop_vars["albedo_clearsky"], ~atms["mask_low_cloud"] & atms["mask_height"]))
         .mean()
         .values
     )
@@ -167,7 +158,6 @@ ax.axhline(mean_cloud_albedo, color="grey", linestyle="--", label="Mean low clou
 ax.plot(binned_albedos['interpolated'], color="k", linestyle="-", label="Mean")
 ax.legend()
 fig.tight_layout()
-# fig.savefig("plots/albedo_vs_LWP.png", dpi=300)
 
 # %% plot clearsky albedo
 fig, ax = scatterplot(
@@ -198,10 +188,10 @@ lower_trop_vars["R_t"] = xr.where(
 
 # %% calculate mean R_t
 mean_R_l = float(
-    cut_data(lower_trop_vars["R_t"], atms["mask_height"] & mask_uncon_lc).mean().values
+    cut_data(lower_trop_vars["R_t"], atms["mask_height"] & atms['mask_low_cloud']).mean().values
 )
 mean_R_cs = float(
-    cut_data(lower_trop_vars["R_t"], atms["mask_height"] & ~mask_uncon_lc).mean().values
+    cut_data(lower_trop_vars["R_t"], atms["mask_height"] & ~atms['mask_low_cloud']).mean().values
 )
 
 # %% linear regression of R_t vs IWP
@@ -268,17 +258,17 @@ binned_lower_trop_vars["R_t"] = (
 )
 
 # %% save variables
-path = "/work/bm1183/m301049/icon_arts_processed/derived_quantities/"
+path = "/work/bm1183/m301049/iwp_framework/mons/"
 
-lower_trop_vars.to_netcdf(path + "lower_trop_vars.nc")
+lower_trop_vars.to_netcdf(path + "data/lower_trop_vars.nc")
 
-with open (path + "mean_lower_trop_vars.pkl", "wb") as f:
+with open(path + "data/lower_trop_vars_mean.pkl", "wb") as f:
     pickle.dump(binned_lower_trop_vars, f)
 
-with open(path + "C_h2o.pkl", "wb") as f:
+with open(path + "parameters/C_h2o_params.pkl", "wb") as f:
     pickle.dump(c_h20_coeffs, f)
 
-with open(path + "lower_trop_params.pkl", "wb") as f:
+with open(path + "parameters/lower_trop_params.pkl", "wb") as f:
     pickle.dump(
         {
             "a_l": mean_cloud_albedo,

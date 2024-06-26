@@ -1,11 +1,9 @@
 # %%
 import pickle
 import xarray as xr
-import matplotlib.pyplot as plt
-import cartopy.crs as ccrs
 
 # %% load data
-path = "/work/bm1183/m301049/icon_arts_processed/fullrange_flux_mid1deg_fast/"
+path = "/work/bm1183/m301049/iwp_framework/mons/raw_data/fullrange_flux_mid1deg_noice/"
 
 atms = pickle.load(open(path + "atms.pkl", "rb"))
 results = pickle.load(open(path + "results.pkl", "rb"))

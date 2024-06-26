@@ -317,7 +317,7 @@ def calculate_IWC_cumsum(atms, convention="icon"):
     return IWC_cumsum
 
 
-def calculate_h_cloud_temperature(atms, IWP_emission=8e-3, convention="icon"):
+def calculate_h_cloud_temperature(atms, fluxes, IWP_emission=8e-3, convention="icon", option="bright"):
     """
     Calculate the temperature of high clouds.
     """
@@ -325,9 +325,22 @@ def calculate_h_cloud_temperature(atms, IWP_emission=8e-3, convention="icon"):
         vert_coord = "level_full"
     elif convention == "arts":
         vert_coord = "pressure"
+
+    if option == "bright":
+        # calc brightness temperature
+        flux = fluxes['allsky_lw_up'].isel(pressure=-1)
+        T_bright = (flux / 5.67e-8) ** (1 / 4)
+        # exclude temperatures above tropopause
+        p_trop_ixd = atms["temperature"].argmin("pressure")
+        p_trop = atms["pressure"].isel(pressure=p_trop_ixd)
+        T_profile = atms["temperature"].where(atms["pressure"] > p_trop, 0)
+        # find pressure level where T == T_bright in troposphere
+        top_idx_thick = np.abs(T_profile - T_bright).argmin(vert_coord)
+    elif option == "emission":
+        top_idx_thick = np.abs(atms["IWC_cumsum"] - IWP_emission).argmin(vert_coord)
+
     top_idx_thin = (atms["IWC"] + atms["snow"] + atms["graupel"]).argmax(vert_coord)
-    top_idx_thick = np.abs(atms["IWC_cumsum"] - IWP_emission).argmin(vert_coord)
-    top_idx = xr.where(top_idx_thick < top_idx_thin, top_idx_thick, top_idx_thin)
+
     if convention == "icon":
         top_idx = xr.where(top_idx_thick < top_idx_thin, top_idx_thick, top_idx_thin)
         p_top = atms.isel(level_full=top_idx).pressure
@@ -395,3 +408,75 @@ def calc_cf(ds):
         "vgrid": "reference",
     }
     return cf
+
+def calc_heating_rate(fluxes):
+    g = 9.81
+    cp = 1005
+    seconds_per_day = 24 * 60 * 60
+    p = fluxes["pressure"]
+    p_half = (p[1:].values + p[:-1].values) / 2
+    fluxes = fluxes.assign_coords(p_half=p_half)
+
+    allsky_hr_lw = (
+        (g / cp)
+        * (
+            (fluxes["allsky_lw_up"] + fluxes["allsky_lw_down"]).diff("pressure")
+            / fluxes["pressure"].diff("pressure")
+        )
+        * seconds_per_day
+    )
+    allsky_hr_lw["pressure"] = p_half
+    allsky_hr_lw = allsky_hr_lw.rename({"pressure": "p_half"})
+    fluxes["allsky_hr_lw"] = allsky_hr_lw
+
+    clearsky_hr_lw = (
+        (g / cp)
+        * (
+            (fluxes["clearsky_lw_up"] + fluxes["clearsky_lw_down"]).diff("pressure")
+            / fluxes["pressure"].diff("pressure")
+        )
+        * seconds_per_day
+    )
+    clearsky_hr_lw["pressure"] = p_half
+    clearsky_hr_lw = clearsky_hr_lw.rename({"pressure": "p_half"})
+    fluxes["clearsky_hr_lw"] = clearsky_hr_lw
+
+    allsky_hr_sw = (
+        (g / cp)
+        * (
+            (fluxes["allsky_sw_up"] + fluxes["allsky_sw_down"]).diff("pressure")
+            / fluxes["pressure"].diff("pressure")
+        )
+        * seconds_per_day
+    )
+    allsky_hr_sw["pressure"] = p_half
+    allsky_hr_sw = allsky_hr_sw.rename({"pressure": "p_half"})
+    fluxes["allsky_hr_sw"] = allsky_hr_sw
+
+    clearsky_hr_sw = (
+        (g / cp)
+        * (
+            (fluxes["clearsky_sw_up"] + fluxes["clearsky_sw_down"]).diff("pressure")
+            / fluxes["pressure"].diff("pressure")
+        )
+        * seconds_per_day
+    )
+    clearsky_hr_sw["pressure"] = p_half
+    clearsky_hr_sw = clearsky_hr_sw.rename({"pressure": "p_half"})
+    fluxes["clearsky_hr_sw"] = clearsky_hr_sw
+    return fluxes
+
+def change_convention(fluxes):
+    names = [
+    "allsky_sw_down",
+    "allsky_sw_up",
+    "allsky_lw_down",
+    "allsky_lw_up",
+    "clearsky_sw_down",
+    "clearsky_sw_up",
+    "clearsky_lw_down",
+    "clearsky_lw_up",
+    ]
+    for name in names:
+        fluxes[name] = fluxes[name] * -1
+    return fluxes

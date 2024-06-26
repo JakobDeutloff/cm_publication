@@ -1,6 +1,5 @@
 # %% import
 import xarray as xr
-from src.calc_variables import calculate_IWC_cumsum, calculate_h_cloud_temperature
 import numpy as np
 
 # %% load data
@@ -103,6 +102,6 @@ ds_monsoon["hc_temperature"], ds_monsoon["hc_top_index"] = calculate_h_cloud_tem
 ds_monsoon['mask_height'] = ds_monsoon.sel(height=ds_monsoon["hc_top_index"])["pressure"] < 35000
 
 # %% save
-ds_monsoon.to_netcdf("/work/bm1183/m301049/nextgems_profiles/monsoon/raw_data_converted.nc")
+ds_monsoon.to_netcdf("/work/bm1183/m301049/iwp_framework/mons/data/full_snapshot_proc.nc")
 
 # %%

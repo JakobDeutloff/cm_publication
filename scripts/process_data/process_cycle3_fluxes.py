@@ -18,12 +18,11 @@ fluxes = {}
 for run in runs:
     fluxes_raw[run] = xr.open_dataset(f"{path}{run}/{file}{run}.nc")
 
-path = "/work/um0878/user_data/jdeutloff/icon_c3_sample/"
-atms_unstructured = xr.open_dataset(path + "atms_unstructured_ozone.nc")
+path = "/work/bm1183/m301049/iwp_framework/ngc3/raw_data/"
+atms_unstructured = xr.open_dataset(path + "unstructured/atms_unstructured.nc")
 atms = xr.open_dataset(path + "atms.nc")
-aux_unstr = xr.open_dataset(path + "aux_unstructured.nc")
+aux_unstr = xr.open_dataset(path + "unstructured/aux_unstructured.nc")
 aux = xr.open_dataset(path + "aux.nc")
-fluxes_str = xr.open_dataset(path + "fluxes_structured.nc")
 
 # %% assign correct local time to aux
 aux = aux.assign(time_local=lambda d: d.time.dt.hour + d.lon / 15)
@@ -69,8 +68,7 @@ for run in runs:
     fluxes[run] = flux_unstacked
 
     # save to netcdf
-    path = "/work/um0878/user_data/jdeutloff/icon_c3_sample/"
-    os.remove(f"{path}fluxes{run}.nc")
+    path = "/work/bm1183/m301049/iwp_framework/ngc3/data/"
     flux_unstacked.to_netcdf(f"{path}fluxes{run}.nc")
 
 # %% testplot of cre in allsky fluxes

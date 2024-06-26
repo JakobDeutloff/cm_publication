@@ -615,7 +615,9 @@ def plot_connectedness(sample, mask, liq_cld_cond, ice_cld_cond, mode="icon"):
     - axes: The matplotlib axes object.
     """
 
-    fig, axes = plt.subplots(2, 3, figsize=(8, 6.8), sharey="row", gridspec_kw={"height_ratios": [3, 1]})
+    fig, axes = plt.subplots(
+        2, 3, figsize=(8, 6.8), sharey="row", gridspec_kw={"height_ratios": [3, 1]}
+    )
     iwp_bins = np.logspace(-5, 1, 4)
     formatter = ScalarFormatter(useMathText=True)
     formatter.set_powerlimits((-1, 2))
@@ -647,6 +649,7 @@ def plot_connectedness(sample, mask, liq_cld_cond, ice_cld_cond, mode="icon"):
         ax.xaxis.set_major_formatter(formatter)
 
     return fig, axes
+
 
 def plot_sum_cre(result, sample, iwp_bins, mode="icon"):
 
@@ -690,21 +693,22 @@ def plot_sum_cre(result, sample, iwp_bins, mode="icon"):
 
     return fig, axes
 
+
 def plot_model_output_arts_with_cre(
     result,
     IWP_bins,
     atms,
     fluxes_3d_noice,
     lw_vars,
+    mean_lw_vars,
     sw_vars,
-    lw_binned_vars,
-    sw_binned_vars,
+    mean_sw_vars,
     f_lc_vals,
     params,
     cre_average,
 ):
     fig = plt.figure(figsize=(12, 18))
-    mask_tuning = atms["mask_height"] & atms["mask_hc_no_lc"]
+    mask_tuning = atms["mask_height"] & ~atms['mask_low_cloud']
     IWP_points = (IWP_bins[1:] + IWP_bins[:-1]) / 2
 
     # hc temperature
@@ -727,7 +731,8 @@ def plot_model_output_arts_with_cre(
         s=0.1,
         color="grey",
     )
-    ax2.plot(lw_binned_vars["binned_emissivity"], color="orange", label="Mean")
+
+    ax2.plot(mean_lw_vars['binned_emissivity'], color="orange", label="Mean")
     ax2.plot(result["em_hc"], color="red", label=r"$\varepsilon(I)$", linestyle="--")
     ax2.set_ylabel(r"HC Emissivity")
     ax2.legend()
@@ -736,7 +741,11 @@ def plot_model_output_arts_with_cre(
     ax3 = fig.add_subplot(6, 2, 3)
     ax3.plot(IWP_points, f_lc_vals["raw"], label=r"Mean $f_{\mathrm{all}}$", color="grey")
     ax3.plot(
-        IWP_points, f_lc_vals["unconnected"], label=r"Mean $f_{\mathrm{uncon}}$", color="purple", linestyle="--"
+        IWP_points,
+        f_lc_vals["unconnected"],
+        label=r"Mean $f_{\mathrm{uncon}}$",
+        color="purple",
+        linestyle="--",
     )
     ax3.plot(
         result["lc_fraction"],
@@ -757,11 +766,10 @@ def plot_model_output_arts_with_cre(
         c=cut_data(fluxes_3d_noice["allsky_sw_down"].isel(pressure=-1), mask_tuning),
         cmap="viridis",
     )
-    ax4.plot(sw_binned_vars["interpolated_albedo"], color="orange", label="Mean")
+    ax4.plot(mean_sw_vars["interpolated_albedo"], color="orange", label="Mean")
     ax4.plot(result["alpha_hc"], color="red", linestyle="--", label=r"$\alpha_{\mathrm{h}}(I)$")
     ax4.set_ylabel(r"HC Albedo")
     ax4.legend()
-
 
     # R_t
     ax5 = fig.add_subplot(6, 2, 5)
@@ -769,7 +777,8 @@ def plot_model_output_arts_with_cre(
     cmap = LinearSegmentedColormap.from_list("my_cmap", colors)
     sc_rt = ax5.scatter(
         cut_data(atms["IWP"], atms["mask_height"]),
-        (-1) * cut_data_mixed(
+        (-1)
+        * cut_data_mixed(
             fluxes_3d_noice["clearsky_lw_up"].isel(pressure=-1),
             fluxes_3d_noice["allsky_lw_up"].isel(pressure=-1),
             atms["mask_height"],
@@ -795,9 +804,7 @@ def plot_model_output_arts_with_cre(
     ax5.plot(IWP_points, mean_rt, color="orange", label="Mean")
     ax5.axhline(-params["R_cs"], color="black", linestyle="--", label=r"$R_{\mathrm{cs}}$")
     ax5.axhline(-params["R_l"], color="navy", linestyle="--", label=r"$R_{\mathrm{l}}$")
-    ax5.plot(
-        -result["R_t"], color="red", linestyle="--", label=r"$R_{\mathrm{t}}(I)$"
-    )
+    ax5.plot(-result["R_t"], color="red", linestyle="--", label=r"$R_{\mathrm{t}}(I)$")
     ax5.set_ylabel(r"LT LW Emissions / $\mathrm{W ~ m^{-2}}$")
     ax5.legend()
     ax5.set_ylim(200, 350)
@@ -807,8 +814,8 @@ def plot_model_output_arts_with_cre(
     sc_at = ax6.scatter(
         cut_data(atms["IWP"], atms["mask_height"]),
         cut_data_mixed(
-            fluxes_3d_noice["albedo_clearsky"],
-            fluxes_3d_noice["albedo_allsky"],
+            sw_vars["clearsky_albedo"],
+            sw_vars["allsky_albedo"],
             atms["mask_height"],
             atms["connected"],
         ),
@@ -821,8 +828,8 @@ def plot_model_output_arts_with_cre(
     )
     mean_a_t = (
         cut_data_mixed(
-            fluxes_3d_noice["albedo_clearsky"],
-            fluxes_3d_noice["albedo_allsky"],
+            sw_vars["clearsky_albedo"],
+            sw_vars["allsky_albedo"],
             atms["mask_height"],
             atms["connected"],
         )
@@ -838,16 +845,27 @@ def plot_model_output_arts_with_cre(
 
     # CRE
     ax7 = fig.add_subplot(4, 1, 3)
-    ax7.plot(cre_average['IWP'], cre_average['connected_sw'], color='blue', linestyle='--')
-    ax7.plot(cre_average['IWP'], cre_average['connected_lw'], color='red', linestyle='--')
-    ax7.plot(cre_average['IWP'], cre_average['connected_sw'] + cre_average['connected_lw'], color='black', linestyle='--')
-    ax7.plot(result.index, result['SW_cre'], color='blue')
-    ax7.plot(result.index, result['LW_cre'], color='red')
-    ax7.plot(result.index, result['SW_cre'] + result['LW_cre'], color='black')
-    ax7.set_xscale('log')
-    # make legend with fake handles and labels 
-    handles = [plt.Line2D([0], [0], color='grey', linestyle='--'), plt.Line2D([0], [0], color='grey'), plt.Line2D([0], [0], color='red', linestyle='-'), plt.Line2D([0], [0], color='blue', linestyle='-'), plt.Line2D([0], [0], color='black', linestyle='-')]
-    labels = ['ARTS', 'Conceptual Model', 'LW', 'SW', 'Net']
+    ax7.plot(cre_average["IWP"], cre_average["connected_sw"], color="blue", linestyle="--")
+    ax7.plot(cre_average["IWP"], cre_average["connected_lw"], color="red", linestyle="--")
+    ax7.plot(
+        cre_average["IWP"],
+        cre_average["connected_sw"] + cre_average["connected_lw"],
+        color="black",
+        linestyle="--",
+    )
+    ax7.plot(result.index, result["SW_cre"], color="blue")
+    ax7.plot(result.index, result["LW_cre"], color="red")
+    ax7.plot(result.index, result["SW_cre"] + result["LW_cre"], color="black")
+    ax7.set_xscale("log")
+    # make legend with fake handles and labels
+    handles = [
+        plt.Line2D([0], [0], color="grey", linestyle="--"),
+        plt.Line2D([0], [0], color="grey"),
+        plt.Line2D([0], [0], color="red", linestyle="-"),
+        plt.Line2D([0], [0], color="blue", linestyle="-"),
+        plt.Line2D([0], [0], color="black", linestyle="-"),
+    ]
+    labels = ["ARTS", "Conceptual Model", "LW", "SW", "Net"]
     ax7.legend(handles, labels)
 
     axes = [ax1, ax2, ax3, ax4, ax5, ax6, ax7]
@@ -861,16 +879,23 @@ def plot_model_output_arts_with_cre(
         ax.set_xticks([1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1e0, 1e1])
         ax.set_xticklabels("")
         ax.set_xlim(1e-5, 10)
-        # plot label at top right corner of axis 
-        ax.text(0.05, 1.08, labels.pop(0), transform=ax.transAxes, fontsize=14, fontweight='bold', va='top', ha='right')
+        # plot label at top right corner of axis
+        ax.text(
+            0.05,
+            1.08,
+            labels.pop(0),
+            transform=ax.transAxes,
+            fontsize=14,
+            fontweight="bold",
+            va="top",
+            ha="right",
+        )
 
     ax5.set_xticklabels(["1e-5", "1e-4", "1e-3", "1e-2", "1e-1", "1e0", "1e1"])
     ax6.set_xticklabels(["1e-5", "1e-4", "1e-3", "1e-2", "1e-1", "1e0", "1e1"])
     ax7.set_xticklabels(["1e-5", "1e-4", "1e-3", "1e-2", "1e-1", "1e0", "1e1"])
-    ax7.set_xlabel('$I$ / kg m$^{-2}$')
-    ax7.set_ylabel('$C(I)$ / W m$^{-2}$')
-    
-
+    ax7.set_xlabel("$I$ / kg m$^{-2}$")
+    ax7.set_ylabel("$C(I)$ / W m$^{-2}$")
 
     # add colorbars
     fig.subplots_adjust(right=0.9)
@@ -879,11 +904,10 @@ def plot_model_output_arts_with_cre(
     fig.colorbar(sc_alpha, cax=cbar_ax1, label="SW Down / W m$^{-2}$")
     fig.colorbar(sc_rt, cax=cbar_ax2, label="LWP / kg m$^{-2}$")
 
-
     # plot CRE
 
-
     return fig, axes
+
 
 def plot_model_output_arts_fancy(
     result,
@@ -1057,6 +1081,7 @@ def plot_model_output_arts_fancy(
 
     return fig, axes
 
+
 def plot_model_output_arts_reduced(
     result,
     IWP_bins,
@@ -1102,7 +1127,7 @@ def plot_model_output_arts_reduced(
         cut_data(atms["IWP"], mask_tuning),
         cut_data(sw_vars["high_cloud_albedo"], mask_tuning),
         s=0.1,
-        color='grey'
+        color="grey",
     )
     ax3.plot(result["alpha_hc"], color="red", linestyle="-", label="Fitted Logistic")
     ax3.set_ylabel("Albedo")
@@ -1119,8 +1144,6 @@ def plot_model_output_arts_reduced(
         label="Constant",
     )
     ax4.set_ylabel("Low Cloud Fraction")
-
-
 
     # a_t
     ax6 = fig.add_subplot(2, 3, 5)
@@ -1145,7 +1168,6 @@ def plot_model_output_arts_reduced(
     ax6.axhline(lc_consts["a_t"], color="navy", linestyle="--", label="Low Cloud")
     ax6.plot(result["alpha_t"], color="red", linestyle="-", label="Superposition")
     ax6.set_ylabel("Lower Trop. Albedo")
-
 
     # R_t
     ax5 = fig.add_subplot(2, 3, 6)
@@ -1190,11 +1212,15 @@ def plot_model_output_arts_reduced(
     ax5.set_xlabel("Ice Water Path / kg m$^{-2}$")
     ax6.set_xlabel("Ice Water Path / kg m$^{-2}$")
 
-
-    # add legend 
+    # add legend
     Line2D = mpl.lines.Line2D
-    handles = [Line2D([0], [0], color='red', linestyle='-'), Line2D([0], [0], color='grey'), Line2D([0], [0], color='k', linestyle='--'), Line2D([0], [0], color='navy', linestyle='--')]
-    labels = ['Model Input', 'Raw Data', 'Clearsky', 'Low Cloud']
+    handles = [
+        Line2D([0], [0], color="red", linestyle="-"),
+        Line2D([0], [0], color="grey"),
+        Line2D([0], [0], color="k", linestyle="--"),
+        Line2D([0], [0], color="navy", linestyle="--"),
+    ]
+    labels = ["Model Input", "Raw Data", "Clearsky", "Low Cloud"]
     fig.legend(handles, labels, bbox_to_anchor=(0.75, -0.02), ncol=4)
 
     return fig, axes

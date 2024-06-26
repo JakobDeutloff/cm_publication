@@ -3,9 +3,9 @@ import numpy as np
 from src.read_data import (
     load_atms_and_fluxes,
     load_derived_vars,
-    load_binned_derived_variables,
     load_parameters,
     load_cre,
+    load_mean_derived_vars,
 )
 from src.plot_functions import (
     plot_model_output_arts_reduced,
@@ -21,12 +21,12 @@ import matplotlib.pyplot as plt
 # %% load data
 atms, fluxes_3d, fluxes_3d_noice = load_atms_and_fluxes()
 lw_vars, sw_vars, lower_trop_vars = load_derived_vars()
-lw_vars_avg, sw_vars_avg, lc_vars_avg = load_binned_derived_variables()
+mean_lw_vars, mean_sw_vars, mean_lc_vars = load_mean_derived_vars()
 parameters = load_parameters()
-cre_binned, cre_interpolated, cre_average = load_cre()
-atms_raw = xr.open_dataset("/work/bm1183/m301049/nextgems_profiles/monsoon/raw_data_converted.nc")
-path = "/work/bm1183/m301049/cm_results/"
-run = "icon_mons_const_lc"
+cre_binned, cre_average = load_cre()
+atms_raw = xr.open_dataset("/work/bm1183/m301049/iwp_framework/mons/data/full_snapshot_proc.nc")
+path = "/work/bm1183/m301049/iwp_framework/mons/model_output/"
+run = "frozen_only"
 with open(path + run + ".pkl", "rb") as f:
     result = pickle.load(f)
 
@@ -45,6 +45,21 @@ f_unconnected_binned = f_unconnected.groupby_bins(
 f_vals = {"raw": f_raw_binned, "unconnected": f_unconnected_binned}
 
 
+# %% plot fancy results with cre
+fig, axes = plot_model_output_arts_with_cre(
+    result,
+    iwp_bins,
+    atms,
+    fluxes_3d_noice,
+    lw_vars,
+    mean_lw_vars,
+    sw_vars,
+    mean_sw_vars,
+    f_vals,
+    parameters,
+    cre_average,
+)
+#fig.savefig("plots/paper/fancy_results_with_cre.png", dpi=500, bbox_inches="tight")
 # %% plot reduced results
 fig, axes = plot_model_output_arts_reduced(
     result,
@@ -53,11 +68,7 @@ fig, axes = plot_model_output_arts_reduced(
     fluxes_3d_noice,
     lw_vars,
     sw_vars,
-    lw_vars_avg,
-    sw_vars_avg,
     f_vals,
-    const_lc_quantities,
-    cs_constants,
 )
 fig.tight_layout()
 fig.savefig("plots/paper/reduced_results.png", dpi=500, bbox_inches="tight")
@@ -69,30 +80,10 @@ fig, axes = plot_model_output_arts_fancy(
     fluxes_3d_noice,
     lw_vars,
     sw_vars,
-    lw_vars_avg,
-    sw_vars_avg,
     f_vals,
-    const_lc_quantities,
-    cs_constants,
 )
 
 fig.savefig("plots/paper/fancy_results.png", dpi=500, bbox_inches="tight")
-
-# %% plot fancy results with cre
-fig, axes = plot_model_output_arts_with_cre(
-    result,
-    iwp_bins,
-    atms,
-    fluxes_3d_noice,
-    lw_vars,
-    sw_vars,
-    lw_vars_avg,
-    sw_vars_avg,
-    f_vals,
-    parameters,
-    cre_average,
-)
-fig.savefig("plots/paper/fancy_results_with_cre.png", dpi=500, bbox_inches="tight")
 
 # %% plot CRE Comparison
 fig, ax = plt.subplots(figsize=(6, 4))

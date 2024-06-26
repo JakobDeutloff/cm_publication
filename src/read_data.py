@@ -18,14 +18,13 @@ def load_atms_and_fluxes():
         Fluxes without ice.
     """
 
-    path = "/work/bm1183/m301049/icon_arts_processed/"
-    run = "fullrange_flux_mid1deg_noice/"
-    fluxes_3d_noice = xr.open_dataset(path + run + "fluxes_3d_full.nc")
-    atms = xr.open_dataset("/work/bm1183/m301049/icon_arts_processed/fullrange_flux_mid1deg/atms_full.nc")
-    run = "fullrange_flux_mid1deg/"
-    fluxes_3d = xr.open_dataset(path + run + "fluxes_3d_full.nc")
+    path = "/work/bm1183/m301049/iwp_framework/mons/data/"
+    fluxes_noice = xr.open_dataset(path + "fluxes_noice_proc.nc")
+    fluxes_allsky = xr.open_dataset(path + "fluxes_allsky_proc.nc")
+    atms = xr.open_dataset(path + "atms_proc.nc")
+    
 
-    return atms, fluxes_3d, fluxes_3d_noice
+    return atms, fluxes_allsky, fluxes_noice
 
 
 def load_cre():
@@ -41,11 +40,10 @@ def load_cre():
     cre_average : xarray.Dataset
         CRE_interpolated averaged over SW radiation bins."""
 
-    path = "/work/bm1183/m301049/icon_arts_processed/derived_quantities/"
+    path = "/work/bm1183/m301049/iwp_framework/mons/data/"
     cre_binned = xr.open_dataset(path + "cre_binned.nc")
-    cre_interpolated = xr.open_dataset(path + "cre_interpolated.nc")
-    cre_average = xr.open_dataset(path + "cre_interpolated_average.nc")
-    return cre_binned, cre_interpolated, cre_average
+    cre_average = xr.open_dataset(path + "cre_mean.nc")
+    return cre_binned, cre_average
 
 
 def load_derived_vars():
@@ -62,34 +60,35 @@ def load_derived_vars():
         Low cloud variables.
     """
 
-    path = "/work/bm1183/m301049/icon_arts_processed/derived_quantities/"
+    path = "/work/bm1183/m301049/iwp_framework/mons/data/"
     lw_vars = xr.open_dataset(path + "lw_vars.nc")
     sw_vars = xr.open_dataset(path + "sw_vars.nc")
     lc_vars = xr.open_dataset(path + "lower_trop_vars.nc")
     return lw_vars, sw_vars, lc_vars
 
-def load_binned_derived_variables():
+def load_mean_derived_vars():
     """
-    Load the binned derived variables.
+    Load the mean derived variables.
 
     Returns
     -------
-    lw_vars_avg : xarray.Dataset
-        Longwave variables binned.
-    sw_vars_avg : xarray.Dataset
-        Shortwave variables binned.
-    lower_trop_vars_avg : xarray.Dataset
-        Lower Troposphere variables binned.
+    lw_vars : xarray.Dataset
+        Longwave variables.
+    sw_vars : xarray.Dataset
+        Shortwave variables.
+    lc_vars : xarray.Dataset
+        Low cloud variables.
     """
 
-    path = "/work/bm1183/m301049/icon_arts_processed/derived_quantities/"
-    with open(path + "mean_sw_vars.pkl", "rb") as f:
-        sw_vars_avg = pickle.load(f)
-    with open(path + "mean_lw_vars.pkl", "rb") as f:
-        lw_vars_avg = pickle.load(f)
-    with open(path + "mean_lower_trop_vars.pkl", "rb") as f:
-        lower_trop_vars_avg = pickle.load(f)
-    return lw_vars_avg, sw_vars_avg, lower_trop_vars_avg
+    path = "/work/bm1183/m301049/iwp_framework/mons/data/"
+    with open(path + "lw_vars_mean.pkl", "rb") as f:
+        lw_vars = pickle.load(f)
+    with open(path + "sw_vars_mean.pkl", "rb") as f:
+        sw_vars = pickle.load(f)
+    with open(path + "lower_trop_vars_mean.pkl", "rb") as f:
+        lc_vars = pickle.load(f)
+    return lw_vars, sw_vars, lc_vars
+    return lw_vars, sw_vars, lc_vars
 
 def load_parameters():
     """
@@ -103,12 +102,12 @@ def load_parameters():
         Parameters for the high cloud emissivity.
     """
 
-    path = "/work/bm1183/m301049/icon_arts_processed/derived_quantities/"
+    path = "/work/bm1183/m301049/iwp_framework/mons/parameters/"
     with open(path + "hc_albedo_params.pkl", "rb") as f:
         hc_albedo = pickle.load(f)
     with open(path + "hc_emissivity_params.pkl", "rb") as f:
         hc_emissivity = pickle.load(f)
-    with open(path + "C_h2o.pkl", "rb") as f:
+    with open(path + "C_h2o_params.pkl", "rb") as f:
         c_h2o = pickle.load(f)
     with open(path + "lower_trop_params.pkl", "rb") as f:
         lower_trop_params = pickle.load(f)
@@ -124,16 +123,5 @@ def load_parameters():
         "a_cs": lower_trop_params["a_cs"],
     }
 
-def load_binned_atms():
-    """
-    Load the binned atmospheric variables.
 
-    Returns
-    -------
-    atms_binned : xarray.Dataset
-        Binned atmospheric variables.
-    """
-
-    path = "/work/bm1183/m301049/nextgems_profiles/"
-    atms_binned = xr.open_dataset(path + "profiles_processed_2.nc")
-    return atms_binned
+# %%

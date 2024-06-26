@@ -33,7 +33,7 @@ result = run_model(
     prescribed_lc_quantities=None
 )
 # %% save result 
-path = '/work/bm1183/m301049/cm_results/'
-with open(path + 'icon_mons_const_lc.pkl', 'wb') as f:
+path = '/work/bm1183/m301049/iwp_framework/mons/model_output/'
+with open(path + 'frozen_only.pkl', 'wb') as f:
     pickle.dump(result, f)
 # %%
