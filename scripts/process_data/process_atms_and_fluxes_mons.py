@@ -44,7 +44,7 @@ sample["IWP"] = calc_IWP(sample, convention=convention)
 sample["IWC_cumsum"] = calculate_IWC_cumsum(sample, convention=convention)
 sample["connected"] = calc_connected(sample, convention=convention, frac_no_cloud=0.1)
 sample["hc_top_temperature"], sample["hc_top_pressure"] = calculate_h_cloud_temperature(
-    sample, fluxes_allsky, convention=convention, IWP_emission=7.8e-3, option="emission"
+    sample, fluxes_allsky, convention=convention, IWP_emission=6.7e-3, option="emission"
 )
 
 # %% create masks

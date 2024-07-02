@@ -2,21 +2,12 @@
 import numpy as np
 from src.read_data import (
     load_atms_and_fluxes,
-    load_derived_vars,
 )
 from src.plot_functions import plot_connectedness
-import pickle
 
 
 # %% load data
 atms, fluxes_3d, fluxes_3d_noice = load_atms_and_fluxes()
-lw_vars, sw_vars, lc_vars = load_derived_vars()
-
-path = '/work/bm1183/m301049/cm_results/'
-run = 'icon_mons_const_lc'
-
-with open(path + run + '.pkl', 'rb') as f:
-    result = pickle.load(f)
 
 # %%  plot connectedness 
 liq_cld_cond = atms["LWC"] + atms["rain"]

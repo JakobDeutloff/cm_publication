@@ -46,7 +46,7 @@ for lc_fraction in tqdm(lc_fractions):
     results[str(lc_fraction)] = result
 
 # %% save result 
-path = '/work/bm1183/m301049/cm_results/'
+path = '/work/bm1183/m301049/iwp_framework/mons/model_output/'
 with open(path + 'lc_ensemble.pkl', 'wb') as f:
     pickle.dump(results, f)
 # %%

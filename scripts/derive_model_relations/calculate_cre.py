@@ -13,10 +13,11 @@ atms, fluxes_3d, fluxes_3d_noice = load_atms_and_fluxes()
 fluxes_toa = fluxes_3d.isel(pressure=-1)
 fluxes_toa_noice = fluxes_3d_noice.isel(pressure=-1)
 cre_all_clouds = xr.Dataset(coords={"lat": atms.lat, "lon": atms.lon})
-cre_high_clouds = cre_all_clouds.copy()
+cre_frozen_clouds = cre_all_clouds.copy()
 
 cre_all_clouds = calc_cre(fluxes_toa, mode="clearsky")
-cre_high_clouds = calc_cre(fluxes_toa, fluxes_toa_noice, mode="noice")
+cre_frozen_clouds = calc_cre(fluxes_toa, fluxes_toa_noice, mode="noice")
+cre_high_clouds = xr.where(atms['mask_low_cloud'], cre_frozen_clouds, cre_all_clouds)
 
 # %% calculate cre in bins and interpolate
 IWP_bins = np.logspace(-5, 1, num=50)
@@ -27,156 +28,44 @@ cre_binned = {}
 cre_interpolated = {}
 cre_interpolated_average = {}
 
-# %% all high clouds - ice over liquid
-cre_binned["all"], cre_interpolated["all"], cre_interpolated_average["all"] = bin_and_average_cre(
-    cre_high_clouds.where(atms["mask_height"]).sel(lat=slice(-30, 30)),
-    IWP_bins,
-    lon_bins,
-    atms,
-    modus="all",
-)
-
-# %% all clouds - any cloud over surface including low clouds
-cre_binned["cre"], cre_interpolated["cre"], cre_interpolated_average["cre"] = bin_and_average_cre(
-    cre_all_clouds.where(atms["mask_height"]).sel(lat=slice(-30, 30)),
-    IWP_bins,
-    lon_bins,
-    atms,
-    modus="all",
-)
-# %% high cloud with no low coud below
-cre_binned["ice_only"], cre_interpolated["ice_only"], cre_interpolated_average["ice_only"] = (
-    bin_and_average_cre(
-        cre_high_clouds.where(atms["mask_height"]).sel(lat=slice(-30, 30)),
-        IWP_bins,
-        lon_bins,
-        atms,
-        modus="ice_only",
-    )
-)
-# %% high cloud over low cloud
-(
-    cre_binned["ice_over_lc"],
-    cre_interpolated["ice_over_lc"],
-    cre_interpolated_average["ice_over_lc"],
-) = bin_and_average_cre(
-    cre_high_clouds.where(atms["mask_height"]).sel(lat=slice(-30, 30)),
-    IWP_bins,
-    lon_bins,
-    atms,
-    modus="ice_over_lc",
-)
-# %% hcre including connectedness of clouds - where connected all clouds are removed from cre
+# %% bin and interpolate cre
 cre_binned["connected"], cre_interpolated["connected"], cre_interpolated_average["connected"] = (
     bin_and_average_cre(
-        cre=cre_all_clouds.where(atms["connected"] == 1, cre_high_clouds)
+        cre=cre_high_clouds
         .where(atms["mask_height"])
         .sel(lat=slice(-30, 30)),
         IWP_bins=IWP_bins,
         lon_bins=lon_bins,
         atms=atms,
-        modus="all",
     )
 )
-# %% plot interpolated mean CRE
-fig, axes = plt.subplots(2, 2, figsize=(10, 9), sharey="row")
 
-pcol = axes[0, 0].pcolor(
-    IWP_bins,
-    lon_bins,
-    cre_binned["ice_only"]["net"].T,
-    cmap="seismic",
-    vmin=-600,
-    vmax=600,
-)
-axes[0, 0].set_ylabel("Longitude [deg]")
-axes[0, 0].set_title("CRE binned ice only")
-axes[0, 1].pcolor(
-    IWP_bins,
-    lon_bins,
-    cre_interpolated["ice_only"]["net"].T,
-    cmap="seismic",
-    vmin=-600,
-    vmax=600,
-)
-axes[0, 1].set_title("CRE interpolated ice only")
-axes[1, 0].pcolor(
-    IWP_bins,
-    lon_bins,
-    cre_binned["connected"]["net"].T,
-    cmap="seismic",
-    vmin=-600,
-    vmax=600,
-)
-axes[1, 0].set_ylabel("Longitude [deg]")
-axes[1, 0].set_xlabel("IWP [kg m$^{-2}$]")
-axes[1, 0].set_title("CRE binned all clouds")
-axes[1, 1].pcolor(
-    IWP_bins,
-    lon_bins,
-    cre_interpolated["connected"]["net"].T,
-    cmap="seismic",
-    vmin=-600,
-    vmax=600,
-)
-axes[1, 1].set_xlabel("IWP [kg m$^{-2}$]")
-axes[1, 1].set_title("CRE interpolated all clouds")
-
-for ax in axes.flatten():
-    ax.set_xscale("log")
-
-fig.colorbar(
-    pcol,
-    label="High Cloud Radiative Effect",
-    location="bottom",
-    ax=axes[:],
-    shrink=0.7,
-    extend="min",
-    pad=0.1,
+cre_binned["no_lc"], cre_interpolated["no_lc"], cre_interpolated_average["no_lc"] = (
+    bin_and_average_cre(
+        cre=cre_high_clouds
+        .where(atms["mask_height"] & ~atms["mask_low_cloud"])
+        .sel(lat=slice(-30, 30)),
+        IWP_bins=IWP_bins,
+        lon_bins=lon_bins,
+        atms=atms,
+    )
 )
 
-#fig.savefig("plots/cre/CRE_binned_by_IWP_and_lon.png", dpi=300, bbox_inches="tight")
+cre_binned["ice_over_lc"], cre_interpolated["ice_over_lc"], cre_interpolated_average["ice_over_lc"] = (
+    bin_and_average_cre(
+        cre=cre_high_clouds
+        .where(atms["mask_height"] & atms["mask_low_cloud"])
+        .sel(lat=slice(-30, 30)),
+        IWP_bins=IWP_bins,
+        lon_bins=lon_bins,
+        atms=atms,
+    )
+)
 
 # %% build dataset of CREs and save it
 
 
 cre_binned_xr = xr.Dataset()
-cre_binned_xr["all_sw"] = xr.DataArray(
-    data=cre_binned["all"]["sw"], coords={"IWP": IWP_points, "lon": lon_points}
-)
-cre_binned_xr["all_lw"] = xr.DataArray(
-    data=cre_binned["all"]["lw"], coords={"IWP": IWP_points, "lon": lon_points}
-)
-cre_binned_xr["all_net"] = xr.DataArray(
-    data=cre_binned["all"]["net"], coords={"IWP": IWP_points, "lon": lon_points}
-)
-cre_binned_xr["ice_only_sw"] = xr.DataArray(
-    data=cre_binned["ice_only"]["sw"], coords={"IWP": IWP_points, "lon": lon_points}
-)
-cre_binned_xr["ice_only_lw"] = xr.DataArray(
-    data=cre_binned["ice_only"]["lw"], coords={"IWP": IWP_points, "lon": lon_points}
-)
-cre_binned_xr["ice_only_net"] = xr.DataArray(
-    data=cre_binned["ice_only"]["net"], coords={"IWP": IWP_points, "lon": lon_points}
-)
-cre_binned_xr["ice_over_lc_sw"] = xr.DataArray(
-    data=cre_binned["ice_over_lc"]["sw"], coords={"IWP": IWP_points, "lon": lon_points}
-)
-cre_binned_xr["ice_over_lc_lw"] = xr.DataArray(
-    data=cre_binned["ice_over_lc"]["lw"], coords={"IWP": IWP_points, "lon": lon_points}
-)
-cre_binned_xr["ice_over_lc_net"] = xr.DataArray(
-    data=cre_binned["ice_over_lc"]["net"], coords={"IWP": IWP_points, "lon": lon_points}
-)
-cre_binned_xr["all_clouds_net"] = xr.DataArray(
-    data=cre_binned["cre"]["net"], coords={"IWP": IWP_points, "lon": lon_points}
-)
-cre_binned_xr["all_clouds_sw"] = xr.DataArray(
-    data=cre_binned["cre"]["sw"], coords={"IWP": IWP_points, "lon": lon_points}
-)
-cre_binned_xr["all_clouds_lw"] = xr.DataArray(
-    data=cre_binned["cre"]["lw"], coords={"IWP": IWP_points, "lon": lon_points}
-)
 cre_binned_xr["connected_net"] = xr.DataArray(
     data=cre_binned["connected"]["net"], coords={"IWP": IWP_points, "lon": lon_points}
 )
@@ -186,46 +75,28 @@ cre_binned_xr["connected_sw"] = xr.DataArray(
 cre_binned_xr["connected_lw"] = xr.DataArray(
     data=cre_binned["connected"]["lw"], coords={"IWP": IWP_points, "lon": lon_points}
 )
+cre_binned_xr["no_lc_net"] = xr.DataArray(
+    data=cre_binned["no_lc"]["net"], coords={"IWP": IWP_points, "lon": lon_points}
+)
+cre_binned_xr["no_lc_sw"] = xr.DataArray(
+    data=cre_binned["no_lc"]["sw"], coords={"IWP": IWP_points, "lon": lon_points}
+)
+cre_binned_xr["no_lc_lw"] = xr.DataArray(
+    data=cre_binned["no_lc"]["lw"], coords={"IWP": IWP_points, "lon": lon_points}
+)
+cre_binned_xr["ice_over_lc_net"] = xr.DataArray(
+    data=cre_binned["ice_over_lc"]["net"], coords={"IWP": IWP_points, "lon": lon_points}
+)
+cre_binned_xr["ice_over_lc_sw"] = xr.DataArray(
+    data=cre_binned["ice_over_lc"]["sw"], coords={"IWP": IWP_points, "lon": lon_points}
+)
+cre_binned_xr["ice_over_lc_lw"] = xr.DataArray(
+    data=cre_binned["ice_over_lc"]["lw"], coords={"IWP": IWP_points, "lon": lon_points}
+)
 cre_binned_xr = cre_binned_xr.assign_coords({"IWP_bins": IWP_bins, "lon_bins": lon_bins})
 
 
 cre_interpolated_average_xr = xr.Dataset()
-cre_interpolated_average_xr["all_sw"] = xr.DataArray(
-    data=cre_interpolated_average["all"]["sw"], coords={"IWP": IWP_points}
-)
-cre_interpolated_average_xr["all_lw"] = xr.DataArray(
-    data=cre_interpolated_average["all"]["lw"], coords={"IWP": IWP_points}
-)
-cre_interpolated_average_xr["all_net"] = xr.DataArray(
-    data=cre_interpolated_average["all"]["net"], coords={"IWP": IWP_points}
-)
-cre_interpolated_average_xr["ice_only_sw"] = xr.DataArray(
-    data=cre_interpolated_average["ice_only"]["sw"], coords={"IWP": IWP_points}
-)
-cre_interpolated_average_xr["ice_only_lw"] = xr.DataArray(
-    data=cre_interpolated_average["ice_only"]["lw"], coords={"IWP": IWP_points}
-)
-cre_interpolated_average_xr["ice_only_net"] = xr.DataArray(
-    data=cre_interpolated_average["ice_only"]["net"], coords={"IWP": IWP_points}
-)
-cre_interpolated_average_xr["ice_over_lc_sw"] = xr.DataArray(
-    data=cre_interpolated_average["ice_over_lc"]["sw"], coords={"IWP": IWP_points}
-)
-cre_interpolated_average_xr["ice_over_lc_lw"] = xr.DataArray(
-    data=cre_interpolated_average["ice_over_lc"]["lw"], coords={"IWP": IWP_points}
-)
-cre_interpolated_average_xr["ice_over_lc_net"] = xr.DataArray(
-    data=cre_interpolated_average["ice_over_lc"]["net"], coords={"IWP": IWP_points}
-)
-cre_interpolated_average_xr["all_clouds_net"] = xr.DataArray(
-    data=cre_interpolated_average["cre"]["net"], coords={"IWP": IWP_points}
-)
-cre_interpolated_average_xr["all_clouds_sw"] = xr.DataArray(
-    data=cre_interpolated_average["cre"]["sw"], coords={"IWP": IWP_points}
-)
-cre_interpolated_average_xr["all_clouds_lw"] = xr.DataArray(
-    data=cre_interpolated_average["cre"]["lw"], coords={"IWP": IWP_points}
-)
 cre_interpolated_average_xr["connected_net"] = xr.DataArray(
     data=cre_interpolated_average["connected"]["net"], coords={"IWP": IWP_points}
 )
@@ -234,6 +105,24 @@ cre_interpolated_average_xr["connected_sw"] = xr.DataArray(
 )
 cre_interpolated_average_xr["connected_lw"] = xr.DataArray(
     data=cre_interpolated_average["connected"]["lw"], coords={"IWP": IWP_points}
+)
+cre_interpolated_average_xr["no_lc_net"] = xr.DataArray(
+    data=cre_interpolated_average["no_lc"]["net"], coords={"IWP": IWP_points}
+)
+cre_interpolated_average_xr["no_lc_sw"] = xr.DataArray(
+    data=cre_interpolated_average["no_lc"]["sw"], coords={"IWP": IWP_points}
+)
+cre_interpolated_average_xr["no_lc_lw"] = xr.DataArray(
+    data=cre_interpolated_average["no_lc"]["lw"], coords={"IWP": IWP_points}
+)
+cre_interpolated_average_xr["ice_over_lc_net"] = xr.DataArray(
+    data=cre_interpolated_average["ice_over_lc"]["net"], coords={"IWP": IWP_points}
+)
+cre_interpolated_average_xr["ice_over_lc_sw"] = xr.DataArray(
+    data=cre_interpolated_average["ice_over_lc"]["sw"], coords={"IWP": IWP_points}
+)
+cre_interpolated_average_xr["ice_over_lc_lw"] = xr.DataArray(
+    data=cre_interpolated_average["ice_over_lc"]["lw"], coords={"IWP": IWP_points}
 )
 cre_interpolated_average_xr = cre_interpolated_average_xr.assign_coords({"IWP_bins": IWP_bins})
 

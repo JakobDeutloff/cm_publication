@@ -79,14 +79,8 @@ def interpolate(data):
     return copy
 
 
-def bin_and_average_cre(cre, IWP_bins, lon_bins, atms, modus="ice_only"):
+def bin_and_average_cre(cre, IWP_bins, lon_bins, atms):
 
-    if modus == "ice_only":
-        mask_hc_lc = (atms["IWP"] > 1e-5) & (atms["LWP"] < 1e-4)
-    elif modus == "ice_over_lc":
-        mask_hc_lc = (atms["IWP"] > 1e-5) & (atms["LWP"] > 1e-4)
-    else:
-        mask_hc_lc = True
 
     dummy = np.zeros([len(IWP_bins) - 1, len(lon_bins) - 1])
     cre_arr = {"net": dummy.copy(), "sw": dummy.copy(), "lw": dummy.copy()}
@@ -97,13 +91,13 @@ def bin_and_average_cre(cre, IWP_bins, lon_bins, atms, modus="ice_only"):
             lon_mask = (atms.lon > lon_bins[j]) & (atms.lon <= lon_bins[j + 1])
 
             cre_arr["net"][i, j] = float(
-                (cre["net"].where(IWP_mask & lon_mask & mask_hc_lc)).mean().values
+                (cre["net"].where(IWP_mask & lon_mask)).mean().values
             )
             cre_arr["sw"][i, j] = float(
-                (cre["sw"].where(IWP_mask & lon_mask & mask_hc_lc)).mean().values
+                (cre["sw"].where(IWP_mask & lon_mask)).mean().values
             )
             cre_arr["lw"][i, j] = float(
-                (cre["lw"].where(IWP_mask & lon_mask & mask_hc_lc)).mean().values
+                (cre["lw"].where(IWP_mask & lon_mask)).mean().values
             )
 
     # Interpolate

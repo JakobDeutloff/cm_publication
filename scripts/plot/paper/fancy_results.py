@@ -26,7 +26,7 @@ parameters = load_parameters()
 cre_binned, cre_average = load_cre()
 atms_raw = xr.open_dataset("/work/bm1183/m301049/iwp_framework/mons/data/full_snapshot_proc.nc")
 path = "/work/bm1183/m301049/iwp_framework/mons/model_output/"
-run = "frozen_only"
+run = "prefinal"
 with open(path + run + ".pkl", "rb") as f:
     result = pickle.load(f)
 
@@ -59,7 +59,7 @@ fig, axes = plot_model_output_arts_with_cre(
     parameters,
     cre_average,
 )
-#fig.savefig("plots/paper/fancy_results_with_cre.png", dpi=500, bbox_inches="tight")
+fig.savefig("plots/paper/fancy_results_with_cre.png", dpi=500, bbox_inches="tight")
 # %% plot reduced results
 fig, axes = plot_model_output_arts_reduced(
     result,

@@ -643,6 +643,7 @@ def plot_connectedness(sample, mask, liq_cld_cond, ice_cld_cond, mode="icon"):
         axes[0, 0].invert_yaxis()
     else:
         axes[0, 0].set_ylabel("Pressure / hPa")
+        axes[0, 0].set_yticks([1000, 500, 100])
 
     # Set the x-axis formatter
     for ax in axes.flatten():
@@ -721,6 +722,7 @@ def plot_model_output_arts_with_cre(
     )
     ax1.plot(result["T_hc"], color="red", linestyle="--", label=r"$T(I)$")
     ax1.set_ylabel(r"HC Temperature / K")
+    ax1.set_yticks([200, 240])
     ax1.legend()
 
     # emissivity
@@ -735,6 +737,7 @@ def plot_model_output_arts_with_cre(
     ax2.plot(mean_lw_vars['binned_emissivity'], color="orange", label="Mean")
     ax2.plot(result["em_hc"], color="red", label=r"$\varepsilon(I)$", linestyle="--")
     ax2.set_ylabel(r"HC Emissivity")
+    ax2.set_yticks([0, 1])
     ax2.legend()
 
     # lc fraction
@@ -755,6 +758,7 @@ def plot_model_output_arts_with_cre(
     )
     ax3.legend()
     ax3.set_ylabel(r"Low Cloud Fraction")
+    ax3.set_yticks([0, 0.5, 1])
 
     # alpha
     ax4 = fig.add_subplot(6, 2, 4)
@@ -770,6 +774,7 @@ def plot_model_output_arts_with_cre(
     ax4.plot(result["alpha_hc"], color="red", linestyle="--", label=r"$\alpha_{\mathrm{h}}(I)$")
     ax4.set_ylabel(r"HC Albedo")
     ax4.legend()
+    ax4.set_yticks([0, 0.8])
 
     # R_t
     ax5 = fig.add_subplot(6, 2, 5)
@@ -808,6 +813,7 @@ def plot_model_output_arts_with_cre(
     ax5.set_ylabel(r"LT LW Emissions / $\mathrm{W ~ m^{-2}}$")
     ax5.legend()
     ax5.set_ylim(200, 350)
+    ax5.set_yticks([225, 275, 325])
 
     # a_t
     ax6 = fig.add_subplot(6, 2, 6)
@@ -842,6 +848,7 @@ def plot_model_output_arts_with_cre(
     ax6.plot(result["alpha_t"], color="red", linestyle="--", label=r"$\alpha_{\mathrm{t}}$")
     ax6.set_ylabel(r"LT Albedo")
     ax6.legend()
+    ax6.set_yticks([0, 0.8])
 
     # CRE
     ax7 = fig.add_subplot(4, 1, 3)
@@ -896,6 +903,7 @@ def plot_model_output_arts_with_cre(
     ax7.set_xticklabels(["1e-5", "1e-4", "1e-3", "1e-2", "1e-1", "1e0", "1e1"])
     ax7.set_xlabel("$I$ / kg m$^{-2}$")
     ax7.set_ylabel("$C(I)$ / W m$^{-2}$")
+    ax7.set_yticks([-200, 0, 200])
 
     # add colorbars
     fig.subplots_adjust(right=0.9)

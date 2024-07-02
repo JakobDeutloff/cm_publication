@@ -63,7 +63,7 @@ def calculate_IWC_cumsum(atms):
     return IWC_cumsum
 
 
-def calculate_h_cloud_temperature(atms, IWP_emission=8e-3):
+def calculate_h_cloud_temperature(atms, IWP_emission=6.7e-3):
     """
     Calculate the temperature of high clouds.
     """
