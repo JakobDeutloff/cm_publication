@@ -237,9 +237,9 @@ cre_interpolated_average_xr["connected_lw"] = xr.DataArray(
 )
 cre_interpolated_average_xr = cre_interpolated_average_xr.assign_coords({"IWP_bins": IWP_bins})
 
-path = "/work/bm1183/m301049/iwp_framework/mons/derived/data/"
+path = "/work/bm1183/m301049/iwp_framework/mons/data/"
 cre_binned_xr.to_netcdf(path + "cre_binned.nc")
-cre_interpolated_average_xr.to_netcdf(path + "cre_average.nc")
+cre_interpolated_average_xr.to_netcdf(path + "cre_mean.nc")
 
 
 # %%

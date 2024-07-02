@@ -1,6 +1,5 @@
 # %% import
 import xarray as xr
-import os
 from src.calc_variables import (
     calc_LWP,
     calc_IWP,

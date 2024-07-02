@@ -8,9 +8,12 @@ from scipy.interpolate import griddata
 from tqdm import tqdm
 
 
-def calc_cre(fluxes_toa, fluxes_toa_noice=None, mode="clearsky"):
+def calc_cre(fluxes_toa, fluxes_toa_noice=None, mode="clearsky", convention="arts"):
 
-    cre = xr.Dataset(coords={"lat": fluxes_toa.lat, "lon": fluxes_toa.lon})
+    if convention == "icon":
+        cre = xr.Dataset(coords={"iwp_points": fluxes_toa.iwp_points, "local_time_points": fluxes_toa.local_time_points, "profile": fluxes_toa.profile})
+    elif convention == "arts":
+        cre = xr.Dataset(coords={"lat": fluxes_toa.lat, "lon": fluxes_toa.lon})
 
     if mode == "clearsky":
         cre["net"] = (
@@ -328,11 +331,11 @@ def calculate_h_cloud_temperature(atms, fluxes, IWP_emission=8e-3, convention="i
 
     if option == "bright":
         # calc brightness temperature
-        flux = fluxes['allsky_lw_up'].isel(pressure=-1)
+        flux = np.abs(fluxes['allsky_lw_up'].isel(pressure=-1))
         T_bright = (flux / 5.67e-8) ** (1 / 4)
         # exclude temperatures above tropopause
-        p_trop_ixd = atms["temperature"].argmin("pressure")
-        p_trop = atms["pressure"].isel(pressure=p_trop_ixd)
+        p_trop_ixd = atms["temperature"].argmin(vert_coord)
+        p_trop = atms["pressure"].isel(level_full=p_trop_ixd)
         T_profile = atms["temperature"].where(atms["pressure"] > p_trop, 0)
         # find pressure level where T == T_bright in troposphere
         top_idx_thick = np.abs(T_profile - T_bright).argmin(vert_coord)
@@ -344,7 +347,7 @@ def calculate_h_cloud_temperature(atms, fluxes, IWP_emission=8e-3, convention="i
     if convention == "icon":
         top_idx = xr.where(top_idx_thick < top_idx_thin, top_idx_thick, top_idx_thin)
         p_top = atms.isel(level_full=top_idx).pressure
-        T_h = atms["temperature"].sel(level_full=top_idx)
+        T_h = atms["temperature"].isel(level_full=top_idx)
     elif convention == "arts":
         top_idx = xr.where(top_idx_thick > top_idx_thin, top_idx_thick, top_idx_thin)
         p_top = atms.isel(pressure=top_idx).pressure

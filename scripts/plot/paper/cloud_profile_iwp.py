@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import xarray as xr
 from src.read_data import load_cre
-import pickle
+
 
 # %%
 def control_plot(ax):
@@ -12,18 +12,18 @@ def control_plot(ax):
     ax.set_xticks([1e1, 1e0, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5])
     ax.spines[["top", "right"]].set_visible(False)
 
+
 # %% load data
-cre_binned, cre_interpolated, cre_interpolated_average = load_cre()
-#ds = xr.open_dataset(
- #   "/work/bm1183/m301049/nextgems_profiles/cycle3/interp_representative_sample.nc"
-#)
-ds= xr.open_dataset("/work/bm1183/m301049/nextgems_profiles/monsoon/interp_cf.nc")
-ds_monsoon = xr.open_dataset('/work/bm1183/m301049/nextgems_profiles/monsoon/raw_data_converted.nc')
+cre_binned, cre_mean = load_cre()
+ds = xr.open_dataset("/work/bm1183/m301049/iwp_framework/mons/data/interp_cf.nc")
+ds_monsoon = xr.open_dataset("/work/bm1183/m301049/iwp_framework/mons/data/full_snapshot_proc.nc")
 
 # %% bin by IWP and average
-IWP_bins = np.logspace(-6, 2, 70)
-IWP_points = (IWP_bins[:-1] + np.diff(IWP_bins)) / 2
-ds_binned = ds.groupby_bins("IWP", IWP_bins).mean()
+IWP_bins_cf = np.logspace(-5, np.log10(30), 50)
+IWP_bins_cre = np.logspace(-5, 1, 50)
+IWP_points_cf = (IWP_bins_cf[:-1] + np.diff(IWP_bins_cf)) / 2
+IWP_points_cre = (IWP_bins_cre[:-1] + np.diff(IWP_bins_cre)) / 2
+ds_binned = ds.groupby_bins("IWP", IWP_bins_cf).mean()
 
 # %% find the two model levels closest to temperature and interpolate the pressure_lev coordinate between them
 temps = [273.15]
@@ -62,23 +62,23 @@ for temp in temps:
 # %% calculate IWP Hist
 n_cells = len(ds_monsoon.lat) * len(ds_monsoon.lon)
 hist, edges = np.histogram(
-    ds_monsoon["IWP"].where(ds_monsoon["mask_height"]), bins=cre_interpolated_average["IWP_bins"]
+    ds_monsoon["IWP"].where(ds_monsoon["mask_height"]), bins=IWP_bins_cre
 )
 hist = hist / n_cells
 
 
 # %% plot cloud occurence vs IWP percentiles
-fig, axes = plt.subplots(3, 1, figsize=(9, 10), height_ratios=[2, 1, 1], sharex=True)
+fig, axes = plt.subplots(4, 1, figsize=(12, 12), height_ratios=[3, 1, 1, 1], sharex=True)
 
 # plot cloud fraction
 cf = axes[0].contourf(
-    IWP_points,
+    IWP_points_cf,
     ds.pressure_lev / 100,
     ds_binned["cf"].T,
     cmap="Blues",
     levels=np.arange(0.1, 1.1, 0.1),
 )
-axes[0].plot(IWP_points, levels[273.15].values / 100, color="grey", linestyle="--")
+axes[0].plot(IWP_points_cf, levels[273.15].values / 100, color="grey", linestyle="--")
 axes[0].text(2e-5, 560, "0°C", color="grey", fontsize=11)
 axes[0].invert_yaxis()
 axes[0].set_ylabel("Pressure / hPa")
@@ -87,33 +87,41 @@ axes[0].set_yticks([1000, 600, 200])
 # plot CRE
 axes[1].axhline(0, color="grey", linestyle="--")
 axes[1].plot(
-    cre_interpolated_average.IWP,
-    cre_interpolated_average["connected_sw"],
+    cre_mean.IWP,
+    cre_mean["connected_sw"],
     label="SW",
     color="blue",
     linestyle="-",
 )
 axes[1].plot(
-    cre_interpolated_average.IWP,
-    cre_interpolated_average["connected_lw"],
+    cre_mean.IWP,
+    cre_mean["connected_lw"],
     label="LW",
     color="red",
     linestyle="-",
 )
 axes[1].plot(
-    cre_interpolated_average.IWP,
-    cre_interpolated_average["connected_net"],
+    cre_mean.IWP,
+    cre_mean["connected_net"],
     label="Net",
     color="k",
     linestyle="-",
 )
-axes[1].plot(np.linspace(1 - 6, cre_interpolated_average.IWP.min(), 100), np.ones(100)*cre_interpolated_average['connected_net'][0].values, color="k")
+axes[1].plot(
+    np.linspace(1 - 6, cre_mean.IWP.min(), 100),
+    np.ones(100) * cre_mean["connected_net"][0].values,
+    color="k",
+)
 axes[1].set_ylabel("$C(I)$ / W m$^{-2}$")
 
 # plot IWP dist
 axes[2].stairs(hist, edges, label="IWP", color="black")
-axes[2].set_xscale("log")
 axes[2].set_ylabel("$P(I)$")
+
+# plot P time C 
+P_times_C = hist * cre_mean["connected_net"]
+axes[3].fill_between(cre_mean.IWP, P_times_C, 0, step='pre', color='grey')
+axes[3].set_ylabel("$P(I) ~ \cdot ~ C(I)$ / W m$^{-2}$")
 
 # add colorbar
 fig.subplots_adjust(right=0.8)
@@ -126,75 +134,74 @@ handles, labels = axes[1].get_legend_handles_labels()
 fig.legend(
     labels=labels,
     handles=handles,
-    bbox_to_anchor=(0.92, 0.468),
+    bbox_to_anchor=(0.9, 0.5),
     frameon=False,
 )
 
 # format axes
-labels=["a", "b", "c"]
+labels = ["a", "b", "c", "d"]
 for ax in axes:
     ax.spines[["top", "right"]].set_visible(False)
     ax.set_xlim(1e-5, 10)
     ax.set_xticks([1e1, 1e0, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5])
     ax.set_xscale("log")
     ax.text(
-    0.05,
-    1.12,
-    labels.pop(0),
-    transform=ax.transAxes,
-    fontsize=14,
-    fontweight="bold",
-    va="top",
-    ha="right",
+        0.05,
+        1.12,
+        labels.pop(0),
+        transform=ax.transAxes,
+        fontsize=14,
+        fontweight="bold",
+        va="top",
+        ha="right",
     )
 
-axes[2].set_xlabel("$I$ / kg m$^{-2}$")
-
+axes[3].set_xlabel("$I$ / kg m$^{-2}$")
 fig.savefig("plots/paper/cloud_profile_iwp_mons.png", dpi=500, bbox_inches="tight")
 
-# %% calculate numbers for text 
+# %% calculate numbers for text
 
-# max net CRE 
-max_net_cre = cre_interpolated_average["connected_net"].max().values
-iwp_max_net_cre = cre_interpolated_average.IWP[cre_interpolated_average["connected_net"].argmax()].values
+# max net CRE
+max_net_cre = cre_mean["connected_net"].max().values
+iwp_max_net_cre = cre_mean.IWP[cre_mean["connected_net"].argmax()].values
 print(f"Max net CRE: {max_net_cre} at {iwp_max_net_cre}")
-#max IWP distribution
-iwp_max_hist = cre_interpolated_average.IWP[hist.argmax()].values
+# max IWP distribution
+iwp_max_hist = cre_mean.IWP[hist.argmax()].values
 print(f"Max IWP distribution: {iwp_max_hist}")
 # net HCRE at max IWP distribution
-net_hcre_max_hist = cre_interpolated_average["connected_net"][hist.argmax()].values
+net_hcre_max_hist = cre_mean["connected_net"][hist.argmax()].values
 print(f"Net HCRE at max IWP distribution: {net_hcre_max_hist}")
 
-# %% plot just CRE and IWP dist for poster 
+# %% plot just CRE and IWP dist for poster
 fig, axes = plt.subplots(2, 1, figsize=(6, 5), sharex=True, gridspec_kw={"height_ratios": [2, 1]})
 
-# CRE 
+# CRE
 axes[0].axhline(0, color="grey", linestyle="--")
 axes[0].plot(
-    cre_interpolated_average.IWP,
-    cre_interpolated_average["connected_sw"],
+    cre_mean.IWP,
+    cre_mean["connected_sw"],
     label="SW",
     color="blue",
     linestyle="--",
 )
 axes[0].plot(
-    cre_interpolated_average.IWP,
-    cre_interpolated_average["connected_lw"],
+    cre_mean.IWP,
+    cre_mean["connected_lw"],
     label="LW",
     color="red",
     linestyle="--",
 )
 axes[0].plot(
-    cre_interpolated_average.IWP,
-    cre_interpolated_average["connected_net"],
+    cre_mean.IWP,
+    cre_mean["connected_net"],
     label="Net",
     color="k",
     linestyle="--",
 )
-axes[0].plot(np.linspace(1 - 6, cre_interpolated_average.IWP.min(), 100), np.zeros(100), color="k")
+axes[0].plot(np.linspace(1 - 6, cre_mean.IWP.min(), 100), np.zeros(100), color="k")
 axes[0].plot([], [], color="grey", linestyle="--", label="ARTS")
 axes[0].plot([], [], color="grey", linestyle="-", label="Concept")
-axes[0].set_ylabel("HCRE / W m$^{-2}$")  
+axes[0].set_ylabel("HCRE / W m$^{-2}$")
 
 # IWP dist
 axes[1].stairs(hist, edges, label="IWP", color="black")
@@ -205,15 +212,10 @@ axes[1].set_xlabel("Ice Water Path / kgm$^{-2}$")
 for ax in axes:
     control_plot(ax)
 
-# add legend 
+# add legend
 handles, labels = axes[0].get_legend_handles_labels()
-fig.legend(
-    labels=labels,
-    handles=handles,
-    bbox_to_anchor=(0.9, -0.02),
-    ncols=5
-)
+fig.legend(labels=labels, handles=handles, bbox_to_anchor=(0.9, -0.02), ncols=5)
 
-#fig.savefig("plots/paper/cre_weighting_talk_without.png", dpi=500, bbox_inches="tight")
+# fig.savefig("plots/paper/cre_weighting_talk_without.png", dpi=500, bbox_inches="tight")
 
 # %%

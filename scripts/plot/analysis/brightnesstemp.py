@@ -15,7 +15,7 @@ def calc_brightness_temp(flux):
 
 
 # only look at clouds with cloud tops above 350 hPa and IWP > 1e-1 so that e = 1 can be assumed
-mask = atms["mask_height"] & (atms["IWP"] > 5 * 1e-2) 
+mask = atms["mask_height"] & (atms["IWP"] > 1e-1) 
 
 flux = fluxes_3d["allsky_lw_up"].isel(pressure=-1)
 T_bright = calc_brightness_temp(flux)
@@ -32,7 +32,7 @@ ice_cumsum = atms["IWC_cumsum"].isel(pressure=p_bright_idx)
 ice_cumsum = ice_cumsum.where(mask)
 p_bright = atms.isel(pressure=p_bright_idx)["pressure"].where(mask)
 T_bright = T_bright.where(mask)
-mean_ice_cumsum = ice_cumsum.sel(lat=slice(-30, 30)).mean()
+mean_ice_cumsum = ice_cumsum.sel(lat=slice(-30, 30)).median()
 print(mean_ice_cumsum.values)
 
 

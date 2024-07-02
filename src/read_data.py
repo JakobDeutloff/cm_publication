@@ -90,7 +90,7 @@ def load_mean_derived_vars():
     return lw_vars, sw_vars, lc_vars
     return lw_vars, sw_vars, lc_vars
 
-def load_parameters():
+def load_parameters(experiment='mons'):
     """
     Load the parameters needed for the model.
 
@@ -102,7 +102,7 @@ def load_parameters():
         Parameters for the high cloud emissivity.
     """
 
-    path = "/work/bm1183/m301049/iwp_framework/mons/parameters/"
+    path = f"/work/bm1183/m301049/iwp_framework/{experiment}/parameters/"
     with open(path + "hc_albedo_params.pkl", "rb") as f:
         hc_albedo = pickle.load(f)
     with open(path + "hc_emissivity_params.pkl", "rb") as f:
