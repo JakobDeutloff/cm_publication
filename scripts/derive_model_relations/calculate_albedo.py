@@ -5,14 +5,15 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import pickle
 from scipy.interpolate import griddata
-from src.read_data import load_atms_and_fluxes
+from src.read_data import load_atms_and_fluxes, get_data_path
 from src.plot_functions import scatterplot
 from scipy.optimize import least_squares
 import os
 
 # %% load  data
 atms, fluxes_3d, fluxes_3d_noice = load_atms_and_fluxes()
-lw_vars = xr.open_dataset("/work/bm1183/m301049/iwp_framework/mons/data/lw_vars.nc")
+path = get_data_path()
+lw_vars = xr.open_dataset(path + "data/lw_vars.nc")
 
 # %% initialize data 
 sw_vars = xr.Dataset()
@@ -157,8 +158,6 @@ ax.legend()
 plt.show()
 
 # %% save coefficients as pkl file
-path = '/work/bm1183/m301049/iwp_framework/mons/'
-
 os.remove(path + 'data/sw_vars.nc')
 os.remove(path + 'parameters/hc_albedo_params.pkl')
 os.remove(path + 'data/sw_vars_mean.pkl')

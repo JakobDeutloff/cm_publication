@@ -3,22 +3,19 @@ import xarray as xr
 import numpy as np
 import os
 import matplotlib.pyplot as plt
-from src.read_data import load_atms_and_fluxes
+from src.read_data import load_atms_and_fluxes, get_data_path
 from src.plot_functions import scatterplot
 from src.helper_functions import cut_data, cut_data_mixed
 from scipy.stats import linregress
 from scipy.interpolate import griddata
 import pandas as pd
 import pickle
-from src.hc_model import calc_lc_fraction
 from matplotlib.colors import LinearSegmentedColormap, LogNorm
 
 # %% read data
 atms, fluxes_3d, fluxes_3d_noice = load_atms_and_fluxes()
-lw_vars = xr.open_dataset("/work/bm1183/m301049/iwp_framework/mons/data/lw_vars.nc")
-aux = xr.open_dataset(
-    "/work/bm1183/m301049/iwp_framework/mons/raw_data/fullrange_flux_mid1deg_noice/aux.nc"
-)
+path = get_data_path()
+lw_vars = xr.open_dataset(path + "data/lw_vars.nc")
 
 # %% initialize dataset
 lower_trop_vars = xr.Dataset()
@@ -160,25 +157,6 @@ ax.plot(binned_albedos['interpolated'], color="k", linestyle="-", label="Mean")
 ax.legend()
 fig.tight_layout()
 
-# %% plot clearsky albedo
-fig, ax = scatterplot(
-    cut_data(fluxes_3d_noice.isel(pressure=-1)["clearsky_sw_down"], atms["mask_height"]),
-    cut_data(lower_trop_vars["albedo_clearsky"], atms["mask_height"]),
-    cut_data(aux["land sea mask"], atms["mask_height"]),
-    logx=False,
-    xlabel="SW Down / W m$^{-2}$",
-    ylabel="Clearsky Albedo",
-    cbar_label="Land Sea Mask",
-)
-#  mean ocean albedo
-mean_ocean_albedo = (
-    lower_trop_vars["albedo_clearsky"]
-    .where((aux["land sea mask"] < 0) & atms["mask_height"])
-    .sel(lat=slice(-30, 30))
-    .mean()
-)
-print(f"Ocean albedo: {mean_ocean_albedo.values.round(4)}")
-
 
 # %% calculate R_t
 lower_trop_vars["R_t"] = xr.where(
@@ -259,7 +237,6 @@ binned_lower_trop_vars["R_t"] = (
 )
 
 # %% save variables
-path = "/work/bm1183/m301049/iwp_framework/mons/"
 
 os.remove(path + "data/lower_trop_vars.nc")
 os.remove(path + "data/lower_trop_vars_mean.pkl")

@@ -3,7 +3,7 @@ import numpy as np
 import xarray as xr
 import pickle
 import pandas as pd
-from src.read_data import load_atms_and_fluxes
+from src.read_data import load_atms_and_fluxes, get_data_path
 from src.plot_functions import scatterplot
 from src.helper_functions import cut_data
 from scipy.optimize import least_squares
@@ -12,7 +12,6 @@ import os
 
 # %% load freddis data
 atms, fluxes_allsky, fluxes_noice = load_atms_and_fluxes()
-ds_monsoon = xr.open_dataset("/work/bm1183/m301049/iwp_framework/mons/data/full_snapshot_proc.nc")
 
 
 # %% initialize dataset for new variables
@@ -93,7 +92,7 @@ ax.axhline(1, color="grey", linestyle="--")
 ax.legend()
 
 # %% save coefficients as pkl file
-path = "/work/bm1183/m301049/iwp_framework/mons/"
+path = get_data_path()
 
 os.remove(path + "data/lw_vars.nc")
 os.remove(path + "parameters/hc_emissivity_params.pkl")

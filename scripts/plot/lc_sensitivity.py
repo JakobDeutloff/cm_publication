@@ -5,15 +5,13 @@ import xarray as xr
 import matplotlib.pyplot as plt
 import pandas as pd
 from src.read_data import load_parameters
-from scipy.stats import linregress
 # %% load data
 path = '/work/bm1183/m301049/iwp_framework/mons/model_output/'
 ensemble = pickle.load(open(path + 'lc_ensemble.pkl', 'rb'))
 sample = xr.open_dataset("/work/bm1183/m301049/iwp_framework/mons/data/full_snapshot_proc.nc")
 parameters = load_parameters()
 
-# %%
-
+# %% define function to calculate sum_cre
 def sum_cre(result, sample, iwp_bins):
 
     n_cells = sample['IWP'].count().values
@@ -52,7 +50,7 @@ tick_labels = ax.get_xticklabels()
 tick_labels[1].set_fontweight('bold')
 ax.set_yticks([-20, 0, 20])
 fig.legend(handles=ax.lines, labels=['SW', 'LW', 'Net'], loc='upper right', bbox_to_anchor=(0.75, -0.01), ncols=3)
-fig.savefig('plots/paper/lc_sensitivity.png', dpi=500, bbox_inches='tight')
+fig.savefig('plots/lc_sensitivity.png', dpi=500, bbox_inches='tight')
 
 
 # %% numbers for lc fraction increase 

@@ -4,6 +4,7 @@ from src.hc_model import run_model
 from src.read_data import (
     load_atms_and_fluxes,
     load_parameters,
+    get_data_path
 )
 from src.helper_functions import cut_data
 import pickle
@@ -46,7 +47,7 @@ for lc_fraction in tqdm(lc_fractions):
     results[str(lc_fraction)] = result
 
 # %% save result 
-path = '/work/bm1183/m301049/iwp_framework/mons/model_output/'
-with open(path + 'lc_ensemble.pkl', 'wb') as f:
+path = get_data_path()
+with open(path + 'model_output/lc_ensemble.pkl', 'wb') as f:
     pickle.dump(results, f)
 # %%

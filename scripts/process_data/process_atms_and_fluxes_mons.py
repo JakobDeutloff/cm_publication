@@ -9,34 +9,17 @@ from src.calc_variables import (
     change_convention,
 )
 import os 
+from src.read_data import get_data_path
 # %% setting
-rename = False
 convention = "arts"
 
 # %%
-# path = "/work/bm1183/m301049/nextgems_profiles/cycle3/sample_3/"
-path = "/work/bm1183/m301049/iwp_framework/mons/raw_data/"
+path = get_data_path()
 run_allksy = "fullrange_flux_mid1deg/"
 run_noice = "fullrange_flux_mid1deg_noice/"
-sample = xr.open_dataset(path + run_allksy + "atms.nc")
-fluxes_allsky = xr.open_dataset(path + run_allksy + "fluxes_3d.nc")
-fluxes_noice = xr.open_dataset(path + run_noice + "fluxes_3d.nc")
-
-# %% rename variables
-if rename:
-    sample = sample.rename(
-        {
-            "qs": "snow",
-            "qr": "rain",
-            "cli": "IWC",
-            "clw": "LWC",
-            "qg": "graupel",
-            "pfull": "pressure",
-            "ta": "temperature",
-            "zg": "geometric_height",
-            "ts": "surface_temperature",
-        }
-    )
+sample = xr.open_dataset(path + "raw_data/" + run_allksy + "atms.nc")
+fluxes_allsky = xr.open_dataset(path + "raw_data/" + run_allksy + "fluxes_3d.nc")
+fluxes_noice = xr.open_dataset(path + "raw_data/" + run_noice + "fluxes_3d.nc")
 
 # %% calculate variables
 sample["LWP"] = calc_LWP(sample, convention=convention)
@@ -60,12 +43,11 @@ fluxes_allsky = change_convention(fluxes_allsky)
 fluxes_noice = change_convention(fluxes_noice)
 
 # %% save
-path = "/work/bm1183/m301049/iwp_framework/mons/data/"
-os.remove(path + "atms_proc.nc")
-sample.to_netcdf(path + "atms_proc.nc")
-os.remove(path + "fluxes_allsky_proc.nc")
-fluxes_allsky.to_netcdf(path + "fluxes_allsky_proc.nc")
-os.remove(path + "fluxes_noice_proc.nc")
-fluxes_noice.to_netcdf(path + "fluxes_noice_proc.nc")
+os.remove(path + "data/atms_proc.nc")
+sample.to_netcdf(path + "data/atms_proc.nc")
+os.remove(path + "data/fluxes_allsky_proc.nc")
+fluxes_allsky.to_netcdf(path + "data/fluxes_allsky_proc.nc")
+os.remove(path + "data/fluxes_noice_proc.nc")
+fluxes_noice.to_netcdf(path + "data/fluxes_noice_proc.nc")
 
 # %%

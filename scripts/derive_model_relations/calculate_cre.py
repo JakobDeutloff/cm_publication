@@ -1,7 +1,6 @@
 # %% import
 import numpy as np
 import xarray as xr
-import matplotlib.pyplot as plt
 from src.calc_variables import calc_cre, bin_and_average_cre
 from src.read_data import load_atms_and_fluxes
 import os

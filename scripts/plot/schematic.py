@@ -1,17 +1,12 @@
 # %% import
 import matplotlib.pyplot as plt
-from src.read_data import load_cre
-import xarray as xr
+from src.read_data import load_icon_snapshot, load_model_output
 import numpy as np
-import pickle
 from scipy.signal import savgol_filter
 
 # %% load data
-ds_monsoon = xr.open_dataset("/work/bm1183/m301049/iwp_framework/mons/data/full_snapshot_proc.nc")
-path = "/work/bm1183/m301049/iwp_framework/mons/model_output/"
-run = "frozen_only"
-with open(path + run + ".pkl", "rb") as f:
-    result = pickle.load(f)
+ds_monsoon = load_icon_snapshot()
+result = load_model_output("prefinal")
 
 # %% multiply hist with cre result
 IWP_bins = np.logspace(-5, 1, num=50)
@@ -24,8 +19,8 @@ hist = hist / n_profiles
 cre_sw_weighted = hist * result['SW_cre']
 cre_lw_weighted = hist * result['LW_cre']
 cre_net_weighted = cre_sw_weighted + cre_lw_weighted
-# %% plot schematic of cre 
 
+# %% plot schematic of cre 
 def control_plot(ax):
     ax.spines[['top', 'right']].set_visible(False)
     ax.spines[['bottom', 'left']].set_color('k')
@@ -53,7 +48,7 @@ ax.set_yticks([-50, 0, 50])
 ax.yaxis.set_tick_params(color='k', labelcolor='k')
 ax.axhline(0, color='grey', linewidth=1, linestyle='--')
 ax.set_ylabel('$C(I)$ / W $m^{-2}$', color='k')
-fig.savefig('plots/paper/cre_scheme.png', dpi=300, bbox_inches='tight')
+fig.savefig('plots/cre_scheme.png', dpi=300, bbox_inches='tight')
 
 # %% IWP dist 
 fig, ax = plt.subplots(1, 1, figsize=(5, 3))
@@ -62,7 +57,7 @@ ax.plot(IWP_points, hist_smooth, linewidth=2, color='black')
 ax.set_ylabel('$P(I)$', color='k')
 ax.set_yticks([0, 0.02])
 ax.yaxis.set_tick_params(color='k', labelcolor='k')
-fig.savefig('plots/paper/iwp_scheme.png', dpi=300, bbox_inches='tight')
+fig.savefig('plots/iwp_scheme.png', dpi=300, bbox_inches='tight')
 
 
 # %% folded cre
@@ -73,6 +68,6 @@ ax.plot(net_cre.index, cre_net_weighted_smooth, linewidth=2, color='black')
 ax.set_yticks([-0.4, 0, 0.4])
 ax.yaxis.set_tick_params(color='k', labelcolor='k')
 ax.set_ylabel('$C(I) \cdot P(I)$ / W $m^{-2}$', color='k')
-fig.savefig('plots/paper/folded_cre_scheme.png', dpi=300, bbox_inches='tight')
+fig.savefig('plots/folded_cre_scheme.png', dpi=300, bbox_inches='tight')
 
 # %%

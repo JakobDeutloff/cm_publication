@@ -3,10 +3,10 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import cartopy.crs as ccrs
 from matplotlib.colors import LogNorm
-import xarray as xr
+from src.read_data import load_icon_snapshot
 
 #%% load data
-ds = xr.open_dataset('/work/bm1183/m301049/iwp_framework/mons/data/full_snapshot_proc.nc')
+ds = load_icon_snapshot()
 # %% plot
 # make colormap for IWP
 colors = [
@@ -53,30 +53,6 @@ cb = fig.colorbar(im_iwp, cax=cax, orientation="horizontal", label="IWP / kgm$^{
 cb.set_ticks([1e-4, 1e-3, 1e-2, 1e-1, 1, 10])
 
 fig.tight_layout()
-fig.savefig("plots/paper/eyecatcher_monsoon.png", dpi=500, bbox_inches="tight")
-# %% calculate low cloud fraction 
-ds['f'] = ds["LWP"] > 1e-4 
-ds.where(ds['IWP']>1e-5)['f'].mean()
+fig.savefig("plots/eyecatcher_monsoon.png", dpi=500, bbox_inches="tight")
 
-# %% plot overlying clouds
-projection = ccrs.PlateCarree(central_longitude=180)
-fig, ax = plt.subplots(1, 1, figsize=(15, 2), subplot_kw={"projection": projection})
-
-im_lwp = ax.imshow((ds['LWP']>1e-4).values.squeeze(), extent=[-180, 180, -30, 30], cmap='Reds', alpha=0.5)
-im_iwp = ax.imshow((ds["IWP"]>1e-4).values.squeeze(),extent=[-180, 180, -30, 30], cmap='Blues',  alpha=0.5)
-
-
-fig.subplots_adjust(right=0.85)
-# make colorbars at right side of axes[0]
-cax = fig.add_axes([0.87, 0.1, 0.02, 0.8])
-cax.set_facecolor("grey")
-cb = fig.colorbar(im_lwp, cax=cax, orientation="vertical", label="LWP / kgm$^{-2}$")
-cb.set_ticks([1e-4, 1e-3, 1e-2, 1e-1, 1, 10])
-
-cax = fig.add_axes([0.95, 0.1, 0.02, 0.8])
-cax.set_facecolor("grey")
-cb = fig.colorbar(im_iwp, cax=cax, orientation="vertical", label="IWP / kgm$^{-2}$")
-cb.set_ticks([1e-4, 1e-3, 1e-2, 1e-1, 1, 10])
-
-fig.savefig("plots/paper/eyecatcher_monsoon_overlying.png", dpi=500, bbox_inches="tight")
 # %%

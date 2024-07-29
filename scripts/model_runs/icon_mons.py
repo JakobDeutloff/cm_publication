@@ -4,6 +4,7 @@ from src.hc_model import run_model
 from src.read_data import (
     load_atms_and_fluxes,
     load_parameters,
+    get_data_path
 )
 from src.helper_functions import cut_data
 import pickle
@@ -34,8 +35,8 @@ result = run_model(
     prescribed_lc_quantities=None
 )
 # %% save result 
-path = '/work/bm1183/m301049/iwp_framework/mons/model_output/'
-os.remove(path + 'prefinal.pkl')
-with open(path + 'prefinal.pkl', 'wb') as f:
+path = get_data_path()
+os.remove(path + 'model_output/prefinal.pkl')
+with open(path + 'model_output/prefinal.pkl', 'wb') as f:
     pickle.dump(result, f)
 # %%

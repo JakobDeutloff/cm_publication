@@ -1,18 +1,13 @@
 # %% import
 import numpy as np
 import matplotlib.pyplot as plt
-from src.read_data import load_cre
+from src.read_data import load_cre, load_icon_snapshot, load_model_output
 import pandas as pd
-import xarray as xr
-import pickle
 
 # %% load data
 cre_binned, cre_mean = load_cre()
-ds_monsoon = xr.open_dataset("/work/bm1183/m301049/iwp_framework/mons/data/full_snapshot_proc.nc")
-path = "/work/bm1183/m301049/iwp_framework/mons/model_output/"
-run = "prefinal"
-with open(path + run + ".pkl", "rb") as f:
-    result = pickle.load(f)
+ds_monsoon = load_icon_snapshot()
+result = load_model_output("prefinal")
 
 # %% plot mean CRE vs IWP
 IWP_points = cre_mean["IWP"]
@@ -75,7 +70,7 @@ axes[1].set_title("LWP > $10^{-4}$ kg m$^{-2}$")
 # legend outside of axes
 handles, labels = axes[1].get_legend_handles_labels()
 fig.legend(handles, labels, loc="lower center", ncol=3, bbox_to_anchor=(0.5, -0.18))
-fig.savefig("plots/paper/CREs.png", dpi=300, bbox_inches="tight")
+fig.savefig("plots/CREs.png", dpi=300, bbox_inches="tight")
 
 # %% calculate cumulative HCRE for table
 n_cells = len(ds_monsoon.lat) * len(ds_monsoon.lon)

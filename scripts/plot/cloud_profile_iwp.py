@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import xarray as xr
-from src.read_data import load_cre
+from src.read_data import load_cre, load_icon_snapshot, get_data_path
 
 
 # %%
@@ -15,8 +15,9 @@ def control_plot(ax):
 
 # %% load data
 cre_binned, cre_mean = load_cre()
-ds = xr.open_dataset("/work/bm1183/m301049/iwp_framework/mons/data/interp_cf.nc")
-ds_monsoon = xr.open_dataset("/work/bm1183/m301049/iwp_framework/mons/data/full_snapshot_proc.nc")
+path = get_data_path()
+ds = xr.open_dataset(path + "data/interp_cf.nc")
+ds_monsoon = load_icon_snapshot()
 
 # %% bin by IWP and average
 IWP_bins_cf = np.logspace(-5, np.log10(30), 50)
@@ -160,7 +161,7 @@ for ax in axes:
     )
 
 axes[3].set_xlabel("$I$ / kg m$^{-2}$")
-fig.savefig("plots/paper/cloud_profile_iwp_mons.png", dpi=500, bbox_inches="tight")
+fig.savefig("plots/cloud_profile_iwp_mons.png", dpi=500, bbox_inches="tight")
 
 # %% calculate numbers for text
 
@@ -175,50 +176,5 @@ print(f"Max IWP distribution: {iwp_max_hist}")
 net_hcre_max_hist = cre_mean["connected_net"][hist.argmax()].values
 print(f"Net HCRE at max IWP distribution: {net_hcre_max_hist}")
 
-# %% plot just CRE and IWP dist for poster
-fig, axes = plt.subplots(2, 1, figsize=(6, 5), sharex=True, gridspec_kw={"height_ratios": [2, 1]})
-
-# CRE
-axes[0].axhline(0, color="grey", linestyle="--")
-axes[0].plot(
-    cre_mean.IWP,
-    cre_mean["connected_sw"],
-    label="SW",
-    color="blue",
-    linestyle="--",
-)
-axes[0].plot(
-    cre_mean.IWP,
-    cre_mean["connected_lw"],
-    label="LW",
-    color="red",
-    linestyle="--",
-)
-axes[0].plot(
-    cre_mean.IWP,
-    cre_mean["connected_net"],
-    label="Net",
-    color="k",
-    linestyle="--",
-)
-axes[0].plot(np.linspace(1 - 6, cre_mean.IWP.min(), 100), np.zeros(100), color="k")
-axes[0].plot([], [], color="grey", linestyle="--", label="ARTS")
-axes[0].plot([], [], color="grey", linestyle="-", label="Concept")
-axes[0].set_ylabel("HCRE / W m$^{-2}$")
-
-# IWP dist
-axes[1].stairs(hist, edges, label="IWP", color="black")
-axes[1].set_xscale("log")
-axes[1].set_ylabel("P")
-axes[1].set_xlabel("Ice Water Path / kgm$^{-2}$")
-
-for ax in axes:
-    control_plot(ax)
-
-# add legend
-handles, labels = axes[0].get_legend_handles_labels()
-fig.legend(labels=labels, handles=handles, bbox_to_anchor=(0.9, -0.02), ncols=5)
-
-# fig.savefig("plots/paper/cre_weighting_talk_without.png", dpi=500, bbox_inches="tight")
 
 # %%

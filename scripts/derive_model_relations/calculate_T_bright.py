@@ -35,20 +35,4 @@ T_bright = T_bright.where(mask)
 mean_ice_cumsum = ice_cumsum.sel(lat=slice(-30, 30)).median()
 print(mean_ice_cumsum.values)
 
-
-# %% flux comparison
-T_bright_atms = atms['temperature'].isel(pressure=p_bright_idx).where(mask)
-flux_bright = -(T_bright**4) * 5.67e-8
-flux_bright_atms = -(T_bright_atms**4) * 5.67e-8
-flux_hct = -atms["hc_top_temperature"].where(mask) ** 4 * 5.67e-8
-fig, ax = plt.subplots()
-ax.scatter(
-    flux.sel(lat=slice(-30, 30)).values,
-    flux_hct.sel(lat=slice(-30, 30)).values,
-    s=1,
-    c=atms["IWP"].where(mask).sel(lat=slice(-30, 30)),
-    norm=LogNorm(),
-)
-ax.plot(np.linspace(-210, -50, 100), np.linspace(-210, -50, 100), color="black")
-
 # %%

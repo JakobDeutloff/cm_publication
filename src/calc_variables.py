@@ -406,63 +406,6 @@ def calc_cf(ds):
     }
     return cf
 
-def calc_heating_rate(fluxes):
-    g = 9.81
-    cp = 1005
-    seconds_per_day = 24 * 60 * 60
-    p = fluxes["pressure"]
-    p_half = (p[1:].values + p[:-1].values) / 2
-    fluxes = fluxes.assign_coords(p_half=p_half)
-
-    allsky_hr_lw = (
-        (g / cp)
-        * (
-            (fluxes["allsky_lw_up"] + fluxes["allsky_lw_down"]).diff("pressure")
-            / fluxes["pressure"].diff("pressure")
-        )
-        * seconds_per_day
-    )
-    allsky_hr_lw["pressure"] = p_half
-    allsky_hr_lw = allsky_hr_lw.rename({"pressure": "p_half"})
-    fluxes["allsky_hr_lw"] = allsky_hr_lw
-
-    clearsky_hr_lw = (
-        (g / cp)
-        * (
-            (fluxes["clearsky_lw_up"] + fluxes["clearsky_lw_down"]).diff("pressure")
-            / fluxes["pressure"].diff("pressure")
-        )
-        * seconds_per_day
-    )
-    clearsky_hr_lw["pressure"] = p_half
-    clearsky_hr_lw = clearsky_hr_lw.rename({"pressure": "p_half"})
-    fluxes["clearsky_hr_lw"] = clearsky_hr_lw
-
-    allsky_hr_sw = (
-        (g / cp)
-        * (
-            (fluxes["allsky_sw_up"] + fluxes["allsky_sw_down"]).diff("pressure")
-            / fluxes["pressure"].diff("pressure")
-        )
-        * seconds_per_day
-    )
-    allsky_hr_sw["pressure"] = p_half
-    allsky_hr_sw = allsky_hr_sw.rename({"pressure": "p_half"})
-    fluxes["allsky_hr_sw"] = allsky_hr_sw
-
-    clearsky_hr_sw = (
-        (g / cp)
-        * (
-            (fluxes["clearsky_sw_up"] + fluxes["clearsky_sw_down"]).diff("pressure")
-            / fluxes["pressure"].diff("pressure")
-        )
-        * seconds_per_day
-    )
-    clearsky_hr_sw["pressure"] = p_half
-    clearsky_hr_sw = clearsky_hr_sw.rename({"pressure": "p_half"})
-    fluxes["clearsky_hr_sw"] = clearsky_hr_sw
-    return fluxes
-
 def change_convention(fluxes):
     names = [
     "allsky_sw_down",
