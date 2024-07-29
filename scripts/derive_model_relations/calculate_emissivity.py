@@ -8,6 +8,7 @@ from src.plot_functions import scatterplot
 from src.helper_functions import cut_data
 from scipy.optimize import least_squares
 import xarray as xr
+import os
 
 # %% load freddis data
 atms, fluxes_allsky, fluxes_noice = load_atms_and_fluxes()
@@ -58,21 +59,15 @@ nan_mask = ~np.isnan(y)
 x = x[nan_mask]
 y = y[nan_mask]
 
-# prepare weights
-n_cells = len(ds_monsoon.lat) * len(ds_monsoon.lon)
-hist, edges = np.histogram(ds_monsoon["IWP"].where(ds_monsoon["mask_height"]), bins=IWP_bins)
-hist = hist / n_cells
-hist = hist[nan_mask]
-
 #initial guess
-p0 = [3.25181808, -2.27406137]
+p0 = [-2.27406137, 3.25181808]
 
 def logistic(params, x):
     return 1 / (1 + np.exp(-params[1] * (x - params[0])))
 
 
 def loss(params):
-    return ((logistic(params, x) - y) * hist) / hist.sum()
+    return (logistic(params, x) - y) 
 
 res = least_squares(loss, p0)
 logistic_curve = logistic(res.x, np.log10(IWP_points))
@@ -100,11 +95,13 @@ ax.legend()
 # %% save coefficients as pkl file
 path = "/work/bm1183/m301049/iwp_framework/mons/"
 
-lw_vars.to_netcdf(path + "data/lw_vars.nc")
+os.remove(path + "data/lw_vars.nc")
+os.remove(path + "parameters/hc_emissivity_params.pkl")
+os.remove(path + "data/lw_vars_mean.pkl")
 
+lw_vars.to_netcdf(path + "data/lw_vars.nc")
 with open(path + "parameters/hc_emissivity_params.pkl", "wb") as f:
     pickle.dump(np.array([1., res.x[0], res.x[1]]), f)
-
 with open(path + "data/lw_vars_mean.pkl", "wb") as f:
     pickle.dump(mean_lw_vars, f)
 

@@ -5,6 +5,7 @@ import xarray as xr
 import matplotlib.pyplot as plt
 import pandas as pd
 from src.read_data import load_parameters
+from scipy.stats import linregress
 # %% load data
 path = '/work/bm1183/m301049/iwp_framework/mons/model_output/'
 ensemble = pickle.load(open(path + 'lc_ensemble.pkl', 'rb'))
@@ -13,13 +14,9 @@ parameters = load_parameters()
 
 # %%
 
-def sum_cre(result, sample, iwp_bins, mode='icon'):
+def sum_cre(result, sample, iwp_bins):
 
-    if mode == 'icon':
-        n_cells = (len(sample.cell) * len(sample.time))
-    else:
-        n_cells = len(sample.lat) * len(sample.lon)
-
+    n_cells = sample['IWP'].count().values
     hist, edges = np.histogram(sample["IWP"].where(sample['mask_height']), bins=iwp_bins)
     hist = hist / n_cells
     sum_sw = (result["SW_cre"] * hist).sum()
@@ -37,9 +34,9 @@ IWP_bins = np.logspace(-5, 1, num=50)
 idx = [float(i) for i in list(ensemble.keys())]
 sum_cre_ensemble = pd.DataFrame(index=idx, columns=['SW', 'LW', 'net'])
 for key, result in ensemble.items():
-    sum_cre_ensemble.loc[float(key)]['SW'] = sum_cre(result, sample, IWP_bins, mode='arts')['SW']
-    sum_cre_ensemble.loc[float(key)]['LW'] = sum_cre(result, sample, IWP_bins, mode='arts')['LW']
-    sum_cre_ensemble.loc[float(key)]['net'] = sum_cre(result, sample, IWP_bins, mode='arts')['net']
+    sum_cre_ensemble.loc[float(key)]['SW'] = sum_cre(result, sample, IWP_bins)['SW']
+    sum_cre_ensemble.loc[float(key)]['LW'] = sum_cre(result, sample, IWP_bins)['LW']
+    sum_cre_ensemble.loc[float(key)]['net'] = sum_cre(result, sample, IWP_bins)['net']
 
 # %% plot sum_cre
 fig, ax = plt.subplots(figsize=(5, 4))
@@ -59,7 +56,7 @@ fig.savefig('plots/paper/lc_sensitivity.png', dpi=500, bbox_inches='tight')
 
 
 # %% numbers for lc fraction increase 
-cre = sum_cre_ensemble.iloc[3]['net']
-print(f'Net HCRE for 0.3 low cloud fraction: {cre:.2f} W m^-2')
+increase = (sum_cre_ensemble.loc[0.32]['net'] - sum_cre_ensemble.loc[0.16]['net']) / sum_cre_ensemble.loc[0.16]['net'] * 100
+print(f'Net HCRE increase for doubling of f: {increase:.2f}%')
 
 # %%

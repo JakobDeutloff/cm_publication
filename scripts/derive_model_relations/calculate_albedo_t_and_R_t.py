@@ -1,6 +1,7 @@
 # %% import
 import xarray as xr
 import numpy as np
+import os
 import matplotlib.pyplot as plt
 from src.read_data import load_atms_and_fluxes
 from src.plot_functions import scatterplot
@@ -260,14 +261,16 @@ binned_lower_trop_vars["R_t"] = (
 # %% save variables
 path = "/work/bm1183/m301049/iwp_framework/mons/"
 
-lower_trop_vars.to_netcdf(path + "data/lower_trop_vars.nc")
+os.remove(path + "data/lower_trop_vars.nc")
+os.remove(path + "data/lower_trop_vars_mean.pkl")
+os.remove(path + "parameters/C_h2o_params.pkl")
+os.remove(path + "parameters/lower_trop_params.pkl")
 
+lower_trop_vars.to_netcdf(path + "data/lower_trop_vars.nc")
 with open(path + "data/lower_trop_vars_mean.pkl", "wb") as f:
     pickle.dump(binned_lower_trop_vars, f)
-
 with open(path + "parameters/C_h2o_params.pkl", "wb") as f:
     pickle.dump(c_h20_coeffs, f)
-
 with open(path + "parameters/lower_trop_params.pkl", "wb") as f:
     pickle.dump(
         {

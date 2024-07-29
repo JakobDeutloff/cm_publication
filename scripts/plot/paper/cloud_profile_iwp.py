@@ -103,7 +103,7 @@ axes[1].plot(
 axes[1].plot(
     cre_mean.IWP,
     cre_mean["connected_net"],
-    label="Net",
+    label="net",
     color="k",
     linestyle="-",
 )
@@ -117,10 +117,12 @@ axes[1].set_ylabel("$C(I)$ / W m$^{-2}$")
 # plot IWP dist
 axes[2].stairs(hist, edges, label="IWP", color="black")
 axes[2].set_ylabel("$P(I)$")
+axes[2].set_yticks([0, 0.02])
 
 # plot P time C 
 P_times_C = hist * cre_mean["connected_net"]
-axes[3].fill_between(cre_mean.IWP, P_times_C, 0, step='pre', color='grey')
+axes[3].stairs(P_times_C, IWP_bins_cre, color="k", fill=True, alpha=0.5)
+axes[3].stairs(P_times_C, IWP_bins_cre, color="k")
 axes[3].set_ylabel("$P(I) ~ \cdot ~ C(I)$ / W m$^{-2}$")
 
 # add colorbar

@@ -24,7 +24,7 @@ SW_in = cut_data(fluxes_3d["clearsky_sw_down"]).isel(pressure=-1).mean().values
 parameters["SW_in"] = SW_in
 
 # %% setup ensemble 
-lc_fractions=np.arange(0, 0.6, 0.1)
+lc_fractions=np.array([0., 0.1, 0.16, 0.2, 0.32, 0.4, 0.5])
 results={}
 
 for lc_fraction in tqdm(lc_fractions):

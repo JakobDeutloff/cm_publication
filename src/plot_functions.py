@@ -742,11 +742,11 @@ def plot_model_output_arts_with_cre(
 
     # lc fraction
     ax3 = fig.add_subplot(6, 2, 3)
-    ax3.plot(IWP_points, f_lc_vals["raw"], label=r"Mean $f_{\mathrm{all}}$", color="grey")
+    ax3.plot(IWP_points, f_lc_vals["raw"], label=r"LWP > $10^{-4} ~ \mathrm{kg ~ m^{-2}}$", color="grey")
     ax3.plot(
         IWP_points,
         f_lc_vals["unconnected"],
-        label=r"Mean $f_{\mathrm{uncon}}$",
+        label=r"$f(I)$",
         color="purple",
         linestyle="--",
     )
@@ -757,7 +757,7 @@ def plot_model_output_arts_with_cre(
         label=r"$f$",
     )
     ax3.legend()
-    ax3.set_ylabel(r"Low Cloud Fraction")
+    ax3.set_ylabel(r"Low-Cloud Fraction")
     ax3.set_yticks([0, 0.5, 1])
 
     # alpha

@@ -92,7 +92,7 @@ weighted_lw_cm = result["LW_cre"] * hist
 weighted_net_cm = weighted_sw_cm + weighted_lw_cm
 
 table_cre = pd.DataFrame(
-    index=["ARTS",  "Concept"], columns=["SW", "LW", "Net", "Net Percent"]
+    index=["ARTS",  "Concept"], columns=["SW", "LW", "Net", "Net Percent", "SW percent", "LW percent"]
 )
 table_cre.loc["ARTS"]["SW"] = np.round(
     float((cre_mean["connected_sw"] * hist).sum().values), 2
@@ -107,7 +107,13 @@ table_cre.loc["Concept"]["SW"] = np.round(float((result["SW_cre"] * hist).sum())
 table_cre.loc["Concept"]["LW"] = np.round(float((result["LW_cre"] * hist).sum()), 2)
 table_cre.loc["Concept"]["Net"] = table_cre.loc["Concept"]["SW"] + table_cre.loc["Concept"]["LW"]
 table_cre.loc["Concept"]["Net Percent"] = np.round(
-    ((table_cre.loc["Concept"]["Net"] - table_cre.loc["ARTS"]["Net"])/table_cre.loc['ARTS']['Net']) * 100, 0
+    ((table_cre.loc["Concept"]["Net"] - table_cre.loc["ARTS"]["Net"])/table_cre.loc['ARTS']['Net']) * 100, 2
+)
+table_cre.loc["Concept"]["SW percent"] = np.round(
+    ((table_cre.loc["Concept"]["SW"] - table_cre.loc["ARTS"]["SW"])/table_cre.loc['ARTS']['SW']) * 100, 2
+)
+table_cre.loc["Concept"]["LW percent"] = np.round(
+    ((table_cre.loc["Concept"]["LW"] - table_cre.loc["ARTS"]["LW"])/table_cre.loc['ARTS']['LW']) * 100, 2
 )
 table_cre
 

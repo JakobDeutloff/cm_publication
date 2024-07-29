@@ -8,7 +8,7 @@ from src.calc_variables import (
     calc_connected,
     change_convention,
 )
-
+import os 
 # %% setting
 rename = False
 convention = "arts"
@@ -61,8 +61,11 @@ fluxes_noice = change_convention(fluxes_noice)
 
 # %% save
 path = "/work/bm1183/m301049/iwp_framework/mons/data/"
+os.remove(path + "atms_proc.nc")
 sample.to_netcdf(path + "atms_proc.nc")
+os.remove(path + "fluxes_allsky_proc.nc")
 fluxes_allsky.to_netcdf(path + "fluxes_allsky_proc.nc")
+os.remove(path + "fluxes_noice_proc.nc")
 fluxes_noice.to_netcdf(path + "fluxes_noice_proc.nc")
 
 # %%

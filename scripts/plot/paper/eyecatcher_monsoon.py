@@ -53,7 +53,7 @@ cb = fig.colorbar(im_iwp, cax=cax, orientation="horizontal", label="IWP / kgm$^{
 cb.set_ticks([1e-4, 1e-3, 1e-2, 1e-1, 1, 10])
 
 fig.tight_layout()
-# fig.savefig("plots/paper/eyecatcher_monsoon.png", dpi=1000, bbox_inches="tight")
+fig.savefig("plots/paper/eyecatcher_monsoon.png", dpi=500, bbox_inches="tight")
 # %% calculate low cloud fraction 
 ds['f'] = ds["LWP"] > 1e-4 
 ds.where(ds['IWP']>1e-5)['f'].mean()
@@ -78,5 +78,5 @@ cax.set_facecolor("grey")
 cb = fig.colorbar(im_iwp, cax=cax, orientation="vertical", label="IWP / kgm$^{-2}$")
 cb.set_ticks([1e-4, 1e-3, 1e-2, 1e-1, 1, 10])
 
-fig.savefig("plots/paper/eyecatcher_monsoon_overlying.png", dpi=1000, bbox_inches="tight")
+fig.savefig("plots/paper/eyecatcher_monsoon_overlying.png", dpi=500, bbox_inches="tight")
 # %%

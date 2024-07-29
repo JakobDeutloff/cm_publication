@@ -7,6 +7,7 @@ from src.read_data import (
 )
 from src.helper_functions import cut_data
 import pickle
+import os 
 
 # %% load data
 atms, fluxes_3d, fluxes_3d_noice = load_atms_and_fluxes()
@@ -34,6 +35,7 @@ result = run_model(
 )
 # %% save result 
 path = '/work/bm1183/m301049/iwp_framework/mons/model_output/'
+os.remove(path + 'prefinal.pkl')
 with open(path + 'prefinal.pkl', 'wb') as f:
     pickle.dump(result, f)
 # %%

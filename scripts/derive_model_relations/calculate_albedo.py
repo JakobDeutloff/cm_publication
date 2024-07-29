@@ -8,6 +8,7 @@ from scipy.interpolate import griddata
 from src.read_data import load_atms_and_fluxes
 from src.plot_functions import scatterplot
 from scipy.optimize import least_squares
+import os
 
 # %% load  data
 atms, fluxes_3d, fluxes_3d_noice = load_atms_and_fluxes()
@@ -158,11 +159,13 @@ plt.show()
 # %% save coefficients as pkl file
 path = '/work/bm1183/m301049/iwp_framework/mons/'
 
-sw_vars.to_netcdf(path + "data/sw_vars.nc")
+os.remove(path + 'data/sw_vars.nc')
+os.remove(path + 'parameters/hc_albedo_params.pkl')
+os.remove(path + 'data/sw_vars_mean.pkl')
 
+sw_vars.to_netcdf(path + "data/sw_vars.nc")
 with open(path + "parameters/hc_albedo_params.pkl", "wb") as f:
     pickle.dump(res.x, f)
-
 with open(path + "data/sw_vars_mean.pkl", "wb") as f:
     pickle.dump(mean_sw_vars, f)
 
