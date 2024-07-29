@@ -28,14 +28,14 @@ cre_net_weighted = cre_sw_weighted + cre_lw_weighted
 
 def control_plot(ax):
     ax.spines[['top', 'right']].set_visible(False)
-    ax.spines[['bottom', 'left']].set_color('grey')
+    ax.spines[['bottom', 'left']].set_color('k')
     ax.spines[['bottom', 'left']].set_linewidth(2)
-    ax.set_xlabel("$I$ / kg $m^{-2}$", color='grey')
+    ax.set_xlabel("$I$ / kg $m^{-2}$", color='k')
     ax.set_xscale('log')
     ax.set_xlim(1e-5, 1e1)
     ax.set_xticks([1e-4, 1])
     # set color of xticks and labels to grey
-    ax.xaxis.set_tick_params(color='grey', labelcolor='grey')
+    ax.xaxis.set_tick_params(color='k', labelcolor='k')
     ax.xaxis.set_minor_locator(plt.NullLocator())
 
 net_cre = result['SW_cre'] + result['LW_cre']
@@ -50,18 +50,18 @@ fig, ax = plt.subplots(1, 1, figsize=(5, 3))
 control_plot(ax)
 ax.plot(net_cre.index, net_cre_smooth, linewidth=2, color='black') 
 ax.set_yticks([-50, 0, 50])
-ax.yaxis.set_tick_params(color='grey', labelcolor='grey')
+ax.yaxis.set_tick_params(color='k', labelcolor='k')
 ax.axhline(0, color='grey', linewidth=1, linestyle='--')
-ax.set_ylabel('$C(I)$ / W $m^{-2}$', color='grey')
+ax.set_ylabel('$C(I)$ / W $m^{-2}$', color='k')
 fig.savefig('plots/paper/cre_scheme.png', dpi=300, bbox_inches='tight')
 
 # %% IWP dist 
 fig, ax = plt.subplots(1, 1, figsize=(5, 3))
 control_plot(ax)
 ax.plot(IWP_points, hist_smooth, linewidth=2, color='black')
-ax.set_ylabel('$P(I)$', color='grey')
+ax.set_ylabel('$P(I)$', color='k')
 ax.set_yticks([0, 0.02])
-ax.yaxis.set_tick_params(color='grey', labelcolor='grey')
+ax.yaxis.set_tick_params(color='k', labelcolor='k')
 fig.savefig('plots/paper/iwp_scheme.png', dpi=300, bbox_inches='tight')
 
 
@@ -71,8 +71,8 @@ control_plot(ax)
 ax.fill_between(net_cre.index, cre_net_weighted_smooth, color='grey', alpha=0.5, edgecolor='none', hatch='//')
 ax.plot(net_cre.index, cre_net_weighted_smooth, linewidth=2, color='black')
 ax.set_yticks([-0.4, 0, 0.4])
-ax.yaxis.set_tick_params(color='grey', labelcolor='grey')
-ax.set_ylabel('$C(I) \cdot P(I)$ / W $m^{-2}$', color='grey')
+ax.yaxis.set_tick_params(color='k', labelcolor='k')
+ax.set_ylabel('$C(I) \cdot P(I)$ / W $m^{-2}$', color='k')
 fig.savefig('plots/paper/folded_cre_scheme.png', dpi=300, bbox_inches='tight')
 
 # %%

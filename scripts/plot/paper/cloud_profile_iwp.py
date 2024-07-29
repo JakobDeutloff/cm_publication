@@ -68,7 +68,7 @@ hist = hist / n_cells
 
 
 # %% plot cloud occurence vs IWP percentiles
-fig, axes = plt.subplots(4, 1, figsize=(12, 12), height_ratios=[3, 1, 1, 1], sharex=True)
+fig, axes = plt.subplots(4, 1, figsize=(10, 10), height_ratios=[3, 2, 1, 1], sharex=True)
 
 # plot cloud fraction
 cf = axes[0].contourf(
@@ -113,6 +113,7 @@ axes[1].plot(
     color="k",
 )
 axes[1].set_ylabel("$C(I)$ / W m$^{-2}$")
+axes[1].set_yticks([-200, 0, 200])
 
 # plot IWP dist
 axes[2].stairs(hist, edges, label="IWP", color="black")
@@ -127,7 +128,7 @@ axes[3].set_ylabel("$P(I) ~ \cdot ~ C(I)$ / W m$^{-2}$")
 
 # add colorbar
 fig.subplots_adjust(right=0.8)
-cax = fig.add_axes([0.84, 0.54, 0.02, 0.34])
+cax = fig.add_axes([0.84, 0.59, 0.02, 0.3])
 cb = fig.colorbar(cf, cax=cax, label="Cloud Cover")
 cb.set_ticks([0.1, 0.4, 0.7, 1])
 
@@ -136,7 +137,7 @@ handles, labels = axes[1].get_legend_handles_labels()
 fig.legend(
     labels=labels,
     handles=handles,
-    bbox_to_anchor=(0.9, 0.5),
+    bbox_to_anchor=(0.9, 0.52),
     frameon=False,
 )
 
