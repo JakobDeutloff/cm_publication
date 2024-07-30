@@ -11,7 +11,13 @@ from tqdm import tqdm
 def calc_cre(fluxes_toa, fluxes_toa_noice=None, mode="clearsky", convention="arts"):
 
     if convention == "icon":
-        cre = xr.Dataset(coords={"iwp_points": fluxes_toa.iwp_points, "local_time_points": fluxes_toa.local_time_points, "profile": fluxes_toa.profile})
+        cre = xr.Dataset(
+            coords={
+                "iwp_points": fluxes_toa.iwp_points,
+                "local_time_points": fluxes_toa.local_time_points,
+                "profile": fluxes_toa.profile,
+            }
+        )
     elif convention == "arts":
         cre = xr.Dataset(coords={"lat": fluxes_toa.lat, "lon": fluxes_toa.lon})
 
@@ -81,7 +87,6 @@ def interpolate(data):
 
 def bin_and_average_cre(cre, IWP_bins, lon_bins, atms):
 
-
     dummy = np.zeros([len(IWP_bins) - 1, len(lon_bins) - 1])
     cre_arr = {"net": dummy.copy(), "sw": dummy.copy(), "lw": dummy.copy()}
 
@@ -90,15 +95,9 @@ def bin_and_average_cre(cre, IWP_bins, lon_bins, atms):
         for j in range(len(lon_bins) - 1):
             lon_mask = (atms.lon > lon_bins[j]) & (atms.lon <= lon_bins[j + 1])
 
-            cre_arr["net"][i, j] = float(
-                (cre["net"].where(IWP_mask & lon_mask)).mean().values
-            )
-            cre_arr["sw"][i, j] = float(
-                (cre["sw"].where(IWP_mask & lon_mask)).mean().values
-            )
-            cre_arr["lw"][i, j] = float(
-                (cre["lw"].where(IWP_mask & lon_mask)).mean().values
-            )
+            cre_arr["net"][i, j] = float((cre["net"].where(IWP_mask & lon_mask)).mean().values)
+            cre_arr["sw"][i, j] = float((cre["sw"].where(IWP_mask & lon_mask)).mean().values)
+            cre_arr["lw"][i, j] = float((cre["lw"].where(IWP_mask & lon_mask)).mean().values)
 
     # Interpolate
     interp_cre = {
@@ -217,18 +216,26 @@ def calc_connected(atms, frac_no_cloud=0.05, rain=True, convention="icon"):
                     break
 
         elif convention == "icon_binned":
-            liq_point = liq.sel(local_time_points=time_valid[i], iwp_points=iwp_valid[i], profile=profile_valid[i])
-            ice_point = ice.sel(local_time_points=time_valid[i], iwp_points=iwp_valid[i], profile=profile_valid[i])
+            liq_point = liq.sel(
+                local_time_points=time_valid[i], iwp_points=iwp_valid[i], profile=profile_valid[i]
+            )
+            ice_point = ice.sel(
+                local_time_points=time_valid[i], iwp_points=iwp_valid[i], profile=profile_valid[i]
+            )
             p_top_idx = ice_point.argmax(vert_coord).values
             p_bot_idx = liq_point.argmax(vert_coord).values
-            cld_range = no_cld.sel(local_time_points=time_valid[i], iwp_points=iwp_valid[i], profile=profile_valid[i]).isel(
-                level_full=slice(p_top_idx, p_bot_idx)
-            )
+            cld_range = no_cld.sel(
+                local_time_points=time_valid[i], iwp_points=iwp_valid[i], profile=profile_valid[i]
+            ).isel(level_full=slice(p_top_idx, p_bot_idx))
             # high and low clouds are not connected if there is a 1-cell deep layer without cloud
             for j in range(len(cld_range.level_full)):
                 if cld_range.isel(level_full=j).sum() == 0:
                     connected.loc[
-                        dict(local_time_points=time_valid[i], iwp_points=iwp_valid[i], profile=profile_valid[i])
+                        dict(
+                            local_time_points=time_valid[i],
+                            iwp_points=iwp_valid[i],
+                            profile=profile_valid[i],
+                        )
                     ] = 0
                     break
 
@@ -297,7 +304,7 @@ def calculate_IWC_cumsum(atms, convention="icon"):
     if convention == "icon":
         cell_height = atms["dzghalf"]
         ice_mass = (atms["IWC"] + atms["graupel"] + atms["snow"]) * cell_height
-        IWC_cumsum = ice_mass.cumsum('level_full')
+        IWC_cumsum = ice_mass.cumsum("level_full")
     elif convention == "arts":
         cell_height = calc_cell_height(atms)
         # pressure coordinate needs to be reversed for cumsum
@@ -306,7 +313,6 @@ def calculate_IWC_cumsum(atms, convention="icon"):
         )
         IWC_cumsum = ice_mass.cumsum("pressure").reindex(pressure=list(reversed(atms.pressure)))
 
-
     IWC_cumsum.attrs = {
         "units": "kg m^-2",
         "long_name": "Cumulative Ice Water Content",
@@ -314,7 +320,9 @@ def calculate_IWC_cumsum(atms, convention="icon"):
     return IWC_cumsum
 
 
-def calculate_h_cloud_temperature(atms, fluxes, IWP_emission=8e-3, convention="icon", option="bright"):
+def calculate_h_cloud_temperature(
+    atms, fluxes, IWP_emission=8e-3, convention="icon", option="bright"
+):
     """
     Calculate the temperature of high clouds.
     """
@@ -325,7 +333,7 @@ def calculate_h_cloud_temperature(atms, fluxes, IWP_emission=8e-3, convention="i
 
     if option == "bright":
         # calc brightness temperature
-        flux = np.abs(fluxes['allsky_lw_up'].isel(pressure=-1))
+        flux = np.abs(fluxes["allsky_lw_up"].isel(pressure=-1))
         T_bright = (flux / 5.67e-8) ** (1 / 4)
         # exclude temperatures above tropopause
         p_trop_ixd = atms["temperature"].argmin(vert_coord)
@@ -395,7 +403,7 @@ def calc_cf(ds):
     If cloud condensate exceeds 10^-6 kg/m^3, it is set to 1, otherwise to 0.
     """
     cf = (
-        (ds["IWC"] + ds["LWC"] + ds["rain"] + ds["snow"] + ds["graupel"]) >  4*10 ** (-8)
+        (ds["IWC"] + ds["LWC"] + ds["rain"] + ds["snow"] + ds["graupel"]) > 4 * 10 ** (-8)
     ).astype(int)
     cf.attrs = {
         "component": "atmo",
@@ -406,16 +414,17 @@ def calc_cf(ds):
     }
     return cf
 
+
 def change_convention(fluxes):
     names = [
-    "allsky_sw_down",
-    "allsky_sw_up",
-    "allsky_lw_down",
-    "allsky_lw_up",
-    "clearsky_sw_down",
-    "clearsky_sw_up",
-    "clearsky_lw_down",
-    "clearsky_lw_up",
+        "allsky_sw_down",
+        "allsky_sw_up",
+        "allsky_lw_down",
+        "allsky_lw_up",
+        "clearsky_sw_down",
+        "clearsky_sw_up",
+        "clearsky_lw_down",
+        "clearsky_lw_up",
     ]
     for name in names:
         fluxes[name] = fluxes[name] * -1

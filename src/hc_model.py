@@ -77,7 +77,7 @@ def binning(IWP_bins, data, IWP):
         return data.groupby_bins(IWP, IWP_bins).mean()
 
 
-def calc_ice_albedo(IWP, alpha_hc_params):
+def calc_hc_albedo(IWP, alpha_hc_params):
     """
     Calculates the high-cloud albedo.
 
@@ -95,48 +95,6 @@ def calc_ice_albedo(IWP, alpha_hc_params):
     """
     fitted_vals = logistic(np.log10(IWP), *alpha_hc_params, 0)
     return fitted_vals
-
-
-def calc_mixed_albedo(alpha_ice, alpha_liq):
-    """
-    Calculates the mixed albedo.
-
-    PARAMETERS:
-    ---------------------------
-    alpha_ice: array-like
-        High cloud albedo.
-    alpha_liq: array-like
-        Low cloud albedo.
-
-    RETURNS:
-    ---------------------------
-    mixed_albedo: array-like
-        Mixed albedo.
-    """
-    mixed_albedo = alpha_ice + alpha_liq - (alpha_liq * alpha_ice)
-    return mixed_albedo
-
-
-def calc_hc_albedo(alpha_ice, alpha_mixed, delta_f):
-    """
-    Calculates the high-cloud albedo.
-
-    PARAMETERS:
-    ---------------------------
-    alpha_ice: array-like
-        High cloud albedo.
-    alpha_mixed: array-like
-        Mixed albedo.
-    delta_f: array-like
-        Delta f.
-
-    RETURNS:
-    ---------------------------
-    high_cloud_albedo: array-like
-        High cloud albedo.
-    """
-    high_cloud_albedo = (1 - delta_f) * alpha_ice + delta_f * alpha_mixed
-    return high_cloud_albedo
 
 
 def calc_hc_emissivity(IWP, em_hc_params):
@@ -282,58 +240,6 @@ def hc_lw_cre(em_hc, T_h, R_t, sigma):
     return em_hc * ((-1 * sigma * T_h**4) - R_t)
 
 
-def ac_sw_cre(alpha_cs, alpha_t, alpha_hc, SW_in):
-    """
-    Calculates the SW CRE of the entire cloud population (hc + lc).
-
-    PARAMETERS:
-    ---------------------------
-    alpha_cs: float
-        Clearsky albedo.
-    alpha_t: array-like
-        Albedo below high clouds.
-    alpha_hc: array-like
-        High cloud albedo.
-    SW_in: float
-        Daily average SW radiation at TOA.
-
-    RETURNS:
-    ---------------------------
-    SW_cre: array-like
-        SW CRE of the high clouds.
-    """
-    return -SW_in * (
-        alpha_hc + (alpha_t * (1 - alpha_hc) ** 2) / (1 - alpha_t * alpha_hc) - alpha_cs
-    )
-
-
-def ac_lw_cre(emm_hc, T_h, R_t, R_cs, h20_corr, sigma):
-    """
-    Calculates the LW CRE of the entire cloud population (hc + lc).
-
-    PARAMETERS:
-    ---------------------------
-    em_hc: array-like
-        High cloud emissivity.
-    T_h: array-like
-        High cloud temperature.
-    R_t: array-like
-        LW radiation from below high clouds.
-    R_cs: float
-        Clearsky LW radiation.
-    h20_corr: array-like
-        Correction for water vapor.
-    sigma: float
-        Stefan-Boltzmann constant.
-
-    RETURNS:
-    ---------------------------
-    LW_cre: array-like
-        LW CRE of the high clouds.
-    """
-    return (1 - emm_hc) * R_t - emm_hc * sigma * T_h**4 - (R_cs + h20_corr)
-
-
 def run_model(
     IWP_bins,
     T_hc,
@@ -342,7 +248,6 @@ def run_model(
     connectedness,
     parameters,
     prescribed_lc_quantities=None,
-    liquid_in_albedo=False,
 ):
     """
     Runs the HC Model with given input data and parameters.
@@ -351,12 +256,6 @@ def run_model(
     ---------------------------
     IWP_bins: array-like
         Bins for IWP.
-    albedo_cs: float
-        Clearsky albedo.
-    R_t_cs: float
-        Clearsky R_t.
-    SW_in: float
-        Daily average SW radiation at TOA.
     T_hc: array-like
         High cloud temperature.
     LWP: array-like
@@ -367,10 +266,8 @@ def run_model(
         Connectedness data.
     parameters: dict
         Parameters for the model.
-    const_lc_quantities: dict, optional
-        Constant values for lc quantities.
     prescribed_lc_quantities: dict, optional
-        Prescribed values for lc quantities.
+        Prescribed values for lc quantities
 
     RETURNS:
     ---------------------------
@@ -408,7 +305,7 @@ def run_model(
     )
 
     # calculate radiative properties of high clouds
-    alpha_hc = calc_ice_albedo(IWP_points, parameters["alpha_hc"])
+    alpha_hc = calc_hc_albedo(IWP_points, parameters["alpha_hc"])
     em_hc = calc_hc_emissivity(IWP_points, parameters["em_hc"])
 
     # calculate HCRE
