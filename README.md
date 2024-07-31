@@ -1,4 +1,5 @@
 # README
+[![DOI](https://zenodo.org/badge/835242695.svg)](https://zenodo.org/doi/10.5281/zenodo.13144124)
 
 This repository contains the code for the paper "Insights on Tropical High-Cloud Radiative Effect from
 a New Conceptual Mode" by Deutloff et al. (2024). The data is also made available under the DOI given in the paper. 
