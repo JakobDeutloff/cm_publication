@@ -8,7 +8,7 @@ Save the binned and averaged CRE in a netCDF file.
 import numpy as np
 import xarray as xr
 from src.calc_variables import calc_cre, bin_and_average_cre
-from src.read_data import load_atms_and_fluxes
+from src.read_data import load_atms_and_fluxes, get_data_path
 import os
 
 # %% load  data
@@ -128,11 +128,11 @@ cre_interpolated_average_xr["ice_over_lc_lw"] = xr.DataArray(
 )
 cre_interpolated_average_xr = cre_interpolated_average_xr.assign_coords({"IWP_bins": IWP_bins})
 
-path = "/work/bm1183/m301049/iwp_framework/mons/data/"
-os.remove(path + "cre_binned.nc")
-cre_binned_xr.to_netcdf(path + "cre_binned.nc")
-os.remove(path + "cre_mean.nc")
-cre_interpolated_average_xr.to_netcdf(path + "cre_mean.nc")
+path = get_data_path()
+os.remove(path + "data/cre_binned.nc")
+cre_binned_xr.to_netcdf(path + "data/cre_binned.nc")
+os.remove(path + "data/cre_mean.nc")
+cre_interpolated_average_xr.to_netcdf(path + "data/cre_mean.nc")
 
 
 # %%
