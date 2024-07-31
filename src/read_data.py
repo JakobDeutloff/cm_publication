@@ -1,3 +1,8 @@
+""" 
+Functions to read data 
+IMPORTANT: Update the path in the get_data_path function to the path where the data is stored.
+"""
+
 # %% import
 import xarray as xr
 import pickle
@@ -6,7 +11,14 @@ import pickle
 # %% load data
 
 def get_data_path():
-    # this needs to be changed to the path where the data is stored
+    """
+    Get the path to the data.
+    IMPORTANT: Update the path to your data pathr here.
+
+    Returns
+    -------
+    str: Path to the data.
+    """
     return "/work/bm1183/m301049/iwp_framework/mons/"
 
 def load_icon_snapshot():

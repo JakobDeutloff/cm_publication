@@ -1,3 +1,6 @@
+"""
+Enseble of model runs to investigate the sensitivity of the model to the low cloud fraction
+"""
 # %%
 import numpy as np
 from src.hc_model import run_model

@@ -1,10 +1,12 @@
+"""
+Source code of the conceptual model
+"""
 # %% import
 import numpy as np
 import pandas as pd
 import xarray as xr
 
 # define functions to calculate model quantities
-
 
 def logistic(x, L, x0, k, j):
     """

@@ -1,3 +1,6 @@
+"""
+Model run of the conceptual model used in the study
+"""
 #%%
 import numpy as np
 from src.hc_model import run_model

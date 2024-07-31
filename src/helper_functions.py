@@ -1,3 +1,6 @@
+"""
+Quick and dirty helper functions
+"""
 import numpy as np
 import xarray as xr
     

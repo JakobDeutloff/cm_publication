@@ -1,3 +1,6 @@
+"""
+Identify the ice content at which we usually find the brightness temperature
+"""
 # %% import
 import numpy as np
 import matplotlib.pyplot as plt

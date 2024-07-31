@@ -5,7 +5,6 @@ import pandas as pd
 import xarray as xr
 from src.read_data import load_cre, load_icon_snapshot, get_data_path
 
-
 # %%
 def control_plot(ax):
     ax.set_xlim(1e-5, 10)

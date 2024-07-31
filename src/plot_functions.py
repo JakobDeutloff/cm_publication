@@ -1,3 +1,6 @@
+"""
+Plot functions 
+"""
 import matplotlib.pyplot as plt
 from src.helper_functions import cut_data, cut_data_mixed
 import xarray as xr

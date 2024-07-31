@@ -1,3 +1,6 @@
+"""
+Derive high cloud albedo and respective paramerization of the conceptual model
+"""
 # %% imports
 import numpy as np
 import xarray as xr
@@ -15,7 +18,7 @@ atms, fluxes_3d, fluxes_3d_noice = load_atms_and_fluxes()
 path = get_data_path()
 lw_vars = xr.open_dataset(path + "data/lw_vars.nc")
 
-# %% initialize data 
+# %% initialize datasets
 sw_vars = xr.Dataset()
 mean_sw_vars = pd.DataFrame()
 

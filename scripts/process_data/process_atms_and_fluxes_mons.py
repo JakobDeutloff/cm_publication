@@ -1,3 +1,6 @@
+"""
+Processing of the ARTS radiative fluxes and the corresponding ICON profiles
+"""
 # %% import
 import xarray as xr
 from src.calc_variables import (

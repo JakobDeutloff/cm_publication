@@ -1,3 +1,9 @@
+"""
+Calculate cloud radiative effect (CRE) for high clouds (connected), high clouds with low clouds (ice_over_lc) 
+and high clouds without low clouds (no_lc) and bin and average the CRE by IWP and longitude. 
+Save the binned and averaged CRE in a netCDF file.
+"""
+
 # %% import
 import numpy as np
 import xarray as xr
@@ -16,9 +22,9 @@ cre_frozen_clouds = cre_all_clouds.copy()
 
 cre_all_clouds = calc_cre(fluxes_toa, mode="clearsky")
 cre_frozen_clouds = calc_cre(fluxes_toa, fluxes_toa_noice, mode="noice")
-cre_high_clouds = xr.where(atms['mask_low_cloud'], cre_frozen_clouds, cre_all_clouds)
+cre_high_clouds = xr.where(atms["mask_low_cloud"], cre_frozen_clouds, cre_all_clouds)
 
-# %% calculate cre in bins and interpolate
+# %% create bins and initialize dictionaries
 IWP_bins = np.logspace(-5, 1, num=50)
 IWP_points = (IWP_bins[1:] + IWP_bins[:-1]) / 2
 lon_bins = np.linspace(-180, 180, num=36)
@@ -30,9 +36,7 @@ cre_interpolated_average = {}
 # %% bin and interpolate cre
 cre_binned["connected"], cre_interpolated["connected"], cre_interpolated_average["connected"] = (
     bin_and_average_cre(
-        cre=cre_high_clouds
-        .where(atms["mask_height"])
-        .sel(lat=slice(-30, 30)),
+        cre=cre_high_clouds.where(atms["mask_height"]).sel(lat=slice(-30, 30)),
         IWP_bins=IWP_bins,
         lon_bins=lon_bins,
         atms=atms,
@@ -41,28 +45,27 @@ cre_binned["connected"], cre_interpolated["connected"], cre_interpolated_average
 
 cre_binned["no_lc"], cre_interpolated["no_lc"], cre_interpolated_average["no_lc"] = (
     bin_and_average_cre(
-        cre=cre_high_clouds
-        .where(atms["mask_height"] & ~atms["mask_low_cloud"])
-        .sel(lat=slice(-30, 30)),
+        cre=cre_high_clouds.where(atms["mask_height"] & ~atms["mask_low_cloud"]).sel(
+            lat=slice(-30, 30)
+        ),
         IWP_bins=IWP_bins,
         lon_bins=lon_bins,
         atms=atms,
     )
 )
 
-cre_binned["ice_over_lc"], cre_interpolated["ice_over_lc"], cre_interpolated_average["ice_over_lc"] = (
-    bin_and_average_cre(
-        cre=cre_high_clouds
-        .where(atms["mask_height"] & atms["mask_low_cloud"])
-        .sel(lat=slice(-30, 30)),
-        IWP_bins=IWP_bins,
-        lon_bins=lon_bins,
-        atms=atms,
-    )
+(
+    cre_binned["ice_over_lc"],
+    cre_interpolated["ice_over_lc"],
+    cre_interpolated_average["ice_over_lc"],
+) = bin_and_average_cre(
+    cre=cre_high_clouds.where(atms["mask_height"] & atms["mask_low_cloud"]).sel(lat=slice(-30, 30)),
+    IWP_bins=IWP_bins,
+    lon_bins=lon_bins,
+    atms=atms,
 )
 
 # %% build dataset of CREs and save it
-
 
 cre_binned_xr = xr.Dataset()
 cre_binned_xr["connected_net"] = xr.DataArray(

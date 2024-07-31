@@ -1,3 +1,7 @@
+"""
+Determine albedo and LW emissions of lower troposphere and derive respective conceptual model parameters
+"""
+
 # %% import
 import xarray as xr
 import numpy as np

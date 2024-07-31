@@ -1,4 +1,7 @@
-# %% import
+"""
+Calculate emissivity and derive parameterization of conceptual model
+"""
+#  %% import
 import numpy as np
 import xarray as xr
 import pickle
@@ -10,7 +13,7 @@ from scipy.optimize import least_squares
 import xarray as xr
 import os
 
-# %% load freddis data
+# %% load data
 atms, fluxes_allsky, fluxes_noice = load_atms_and_fluxes()
 
 
