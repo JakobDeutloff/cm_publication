@@ -19,7 +19,7 @@ def get_data_path():
     -------
     str: Path to the data.
     """
-    return "/work/bm1183/m301049/iwp_framework/mons/"
+    return "/work/bm1183/m301049/iwp_framework/publication/"
 
 def load_icon_snapshot():
     """

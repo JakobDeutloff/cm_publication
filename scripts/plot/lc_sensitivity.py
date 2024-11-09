@@ -4,6 +4,7 @@ import pickle
 import xarray as xr
 import matplotlib.pyplot as plt
 import pandas as pd
+from scipy.stats import linregress
 from src.read_data import load_parameters
 # %% load data
 path = '/work/bm1183/m301049/iwp_framework/mons/model_output/'
@@ -36,6 +37,11 @@ for key, result in ensemble.items():
     sum_cre_ensemble.loc[float(key)]['LW'] = sum_cre(result, sample, IWP_bins)['LW']
     sum_cre_ensemble.loc[float(key)]['net'] = sum_cre(result, sample, IWP_bins)['net']
 
+# %% calculate slopes
+res_net = linregress(sum_cre_ensemble.index, list(sum_cre_ensemble['net'].values))
+res_sw = linregress(sum_cre_ensemble.index, list(sum_cre_ensemble['SW'].values))
+res_lw = linregress(sum_cre_ensemble.index, list(sum_cre_ensemble['LW'].values))
+
 # %% plot sum_cre
 fig, ax = plt.subplots(figsize=(5, 4))
 ax.plot(sum_cre_ensemble.index, sum_cre_ensemble['SW'], label='SW', color='blue')
@@ -43,13 +49,16 @@ ax.plot(sum_cre_ensemble.index, sum_cre_ensemble['LW'], label='LW', color='red')
 ax.plot(sum_cre_ensemble.index, sum_cre_ensemble['net'], label='Net', color='black')
 ax.axhline(0, color='grey', linestyle='--')
 ax.spines[['top', 'right']].set_visible(False)
-ax.set_xlabel('$f$')
+ax.set_xlabel('$f_{\mathrm{lc}}$')
 ax.set_ylabel(r'$\overline{C}$ / W m$^{-2}$')
 ax.set_xticks([0, parameters['f'], 0.5])
 tick_labels = ax.get_xticklabels()
 tick_labels[1].set_fontweight('bold')
 ax.set_yticks([-20, 0, 20])
 fig.legend(handles=ax.lines, labels=['SW', 'LW', 'Net'], loc='upper right', bbox_to_anchor=(0.75, -0.01), ncols=3)
+ax.text(0.8, 0.6, f'{res_net.slope:.2f} W m$^{{-2}}$', transform=ax.transAxes, color='black')
+ax.text(0.8, 0.18, f'{res_sw.slope:.2f} W m$^{{-2}}$', transform=ax.transAxes, color='blue')
+ax.text(0.8, 0.95, f'{res_lw.slope:.2f} W m$^{{-2}}$', transform=ax.transAxes, color='red')
 fig.savefig('plots/lc_sensitivity.png', dpi=500, bbox_inches='tight')
 
 

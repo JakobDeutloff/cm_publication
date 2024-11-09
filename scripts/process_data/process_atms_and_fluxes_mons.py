@@ -18,9 +18,9 @@ convention = "arts"
 
 # %%
 path = get_data_path()
-run_allksy = "fullrange_flux_mid1deg/"
-run_noice = "fullrange_flux_mid1deg_noice/"
-sample = xr.open_dataset(path + "raw_data/" + run_allksy + "atms.nc")
+run_allksy = "flux_monsun_Nf10000_1deg/"
+run_noice = "flux_monsun_Nf10000_1deg_nofrozen/"
+sample = xr.open_dataset(path + "raw_data/atms.nc")
 fluxes_allsky = xr.open_dataset(path + "raw_data/" + run_allksy + "fluxes_3d.nc")
 fluxes_noice = xr.open_dataset(path + "raw_data/" + run_noice + "fluxes_3d.nc")
 
